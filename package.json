@@ -12,6 +12,8 @@
     "new": "node scripts/new-post.mjs"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
+    "@vercel/speed-insights": "^2.0.0",
     "date-fns": "^4.1.0",
     "github-slugger": "^2.0.0",
     "gray-matter": "^4.0.3",
