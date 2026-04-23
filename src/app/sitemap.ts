@@ -1,4 +1,5 @@
 import type { MetadataRoute } from 'next';
+import { getCategoryHref } from '@/lib/categories';
 import { getAllCategories, getAllPosts, getAllTags } from '@/lib/posts';
 import { siteConfig } from '../../blog.config';
 
@@ -26,7 +27,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }));
 
   const categories = getAllCategories().map((c) => ({
-    url: `${base}/categories/${encodeURIComponent(c.category)}`,
+    url: `${base}${getCategoryHref(c.segments)}`,
     changeFrequency: 'monthly' as const,
     priority: 0.4,
   }));

@@ -34,6 +34,8 @@ export interface TagBucket {
 
 export interface CategoryBucket {
   category: string;
+  label: string;
+  segments: string[];
   count: number;
   posts: PostMeta[];
 }

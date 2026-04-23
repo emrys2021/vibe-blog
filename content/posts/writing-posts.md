@@ -41,13 +41,13 @@ Every post starts with YAML frontmatter:
 title: "The post title"
 date: "2026-04-22"
 description: "Optional one-liner shown in lists and meta tags."
-category: "windows"
+category: "infra/pxe/ubuntu"
 tags: ["one", "two"]
 draft: false
 ---
 ```
 
-Only `title` is strictly required — everything else has sensible defaults. `draft: true` posts are visible in `next dev` but hidden in `next build`. A post can have at most one `category` (shown as `@category`); `tags` is a list (shown as `#tag`).
+Only `title` is strictly required — everything else has sensible defaults. `draft: true` posts are visible in `next dev` but hidden in `next build`. A post can have at most one `category` path (shown as `@category`), and nested categories are written with `/`, for example `infra/pxe/ubuntu`. Parent category pages include posts from their child categories too. `tags` is a list (shown as `#tag`).
 
 ## Scaffold one quickly
 

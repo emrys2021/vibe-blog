@@ -10,6 +10,13 @@ import type {
   PostMeta,
   TagBucket,
 } from './types';
+import {
+  canonicalizeCategoryPath,
+  getCanonicalCategoryPrefixes,
+  getCanonicalCategorySegments,
+  getDisplayCategoryPrefixes,
+  normalizeCategoryPath,
+} from './categories';
 import { extractToc, renderMarkdown } from './markdown';
 
 const CONTENT_ROOT = path.join(process.cwd(), 'content', 'posts');
@@ -50,8 +57,8 @@ function parseFrontmatter(raw: string, fallbackTitle: string): { data: PostFront
     title: fm.title ?? fallbackTitle,
     date: fm.date ? new Date(fm.date).toISOString() : new Date().toISOString(),
     description: fm.description,
-    category: typeof fm.category === 'string' && fm.category.trim()
-      ? fm.category.trim()
+    category: typeof fm.category === 'string'
+      ? normalizeCategoryPath(fm.category)
       : undefined,
     tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
     draft: Boolean(fm.draft),
@@ -146,21 +153,49 @@ export function getPostsByTag(tag: string): PostMeta[] {
 }
 
 export function getAllCategories(): CategoryBucket[] {
-  const map = new Map<string, PostMeta[]>();
+  const map = new Map<string, { label: string; segments: string[]; posts: PostMeta[] }>();
   for (const post of getAllPosts()) {
     if (!post.category) continue;
-    const key = post.category.toLowerCase();
-    if (!map.has(key)) map.set(key, []);
-    map.get(key)!.push(post);
+    const keys = getCanonicalCategoryPrefixes(post.category);
+    const labels = getDisplayCategoryPrefixes(post.category);
+
+    for (let index = 0; index < keys.length; index += 1) {
+      const key = keys[index];
+      const label = labels[index];
+      if (!map.has(key)) {
+        map.set(key, {
+          label,
+          segments: getCanonicalCategorySegments(label),
+          posts: [],
+        });
+      }
+      map.get(key)!.posts.push(post);
+    }
   }
   return [...map.entries()]
-    .map(([category, posts]) => ({ category, count: posts.length, posts }))
-    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+    .map(([category, bucket]) => ({
+      category,
+      label: bucket.label,
+      segments: bucket.segments,
+      count: bucket.posts.length,
+      posts: bucket.posts,
+    }))
+    .sort((a, b) => a.category.localeCompare(b.category));
 }
 
-export function getPostsByCategory(category: string): PostMeta[] {
-  const lower = safeDecode(category).toLowerCase();
-  return getAllPosts().filter((p) => p.category?.toLowerCase() === lower);
+export function getCategoryBucket(category: string | string[]): CategoryBucket | null {
+  const canonical = canonicalizeCategoryPath(category);
+  if (!canonical) return null;
+  return getAllCategories().find((bucket) => bucket.category === canonical) ?? null;
+}
+
+export function getPostsByCategory(category: string | string[]): PostMeta[] {
+  const canonical = canonicalizeCategoryPath(category);
+  if (!canonical) return [];
+  return getAllPosts().filter((post) => {
+    const postCategory = canonicalizeCategoryPath(post.category);
+    return postCategory === canonical || postCategory?.startsWith(`${canonical}/`);
+  });
 }
 
 function safeDecode(s: string): string {

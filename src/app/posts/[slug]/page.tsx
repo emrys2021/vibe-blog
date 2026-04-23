@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { getCategoryHref } from '@/lib/categories';
 import { getAdjacentPosts, getAllSlugs, getPost } from '@/lib/posts';
 import { formatDate } from '@/lib/format';
 import { Prompt } from '@/components/Prompt';
@@ -74,7 +75,7 @@ export default async function PostPage({ params }: Props) {
                 <>
                   <span>·</span>
                   <Link
-                    href={`/categories/${encodeURIComponent(post.category.toLowerCase())}`}
+                    href={getCategoryHref(post.category)}
                     className="text-accent hover:text-accent-2"
                   >
                     @{post.category}

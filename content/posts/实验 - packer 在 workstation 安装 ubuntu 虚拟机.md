@@ -1,8 +1,8 @@
 ---
-date created: Sunday, March 29th 2026, 12:04:39 am
-date modified: Sunday, March 29th 2026, 5:52:27 pm
+category: "服务/虚拟化/hashicorp"
+tags: ["虚拟化", "packer"]
+date: "2026-04-21"
 ---
-
 
 > [!info]+ 实验目的
 > 使用 [[实验 - minio + nexus 搭建 iso repo]] 搭建好 `iso repo` 后，使用 `packer` 拉取 `nexus` 上的 `iso`，然后在 `vmware workstaion` 中创建 `ubuntu vm`
@@ -11,6 +11,7 @@ date modified: Sunday, March 29th 2026, 5:52:27 pm
 
 > [!abstract]+ vmware plugin
 > vmware plugin 提供 2个 builder plugin
+>
 > 1. `vmware-iso`：This builder creates a virtual machine, installs a guest operating system from an ISO, provisions software within the guest operating system, and then exports the virtual machine as an image. Use this builder to start by creating a new image.
 > 2. `vmware-vmx`：This builder imports an existing virtual machine, runs provisioners on the virtual machine, and then exports the virtual machine as an image. Use this builder to start from an existing image as the source.
 
@@ -35,10 +36,10 @@ packer
 
 ```
 
-
 ###### ubuntu.pkr.hcl
 
-*packer/ubuntu.pkr.hcl*
+_packer/ubuntu.pkr.hcl_
+
 ```yaml
 packer {
   # 插件声明：Packer 1.7+ 版本必须显式声明插件，否则无法识别 source 或 post-processor
@@ -85,13 +86,13 @@ source "vmware-iso" "ubuntu_server" {
   http_directory = "http" # 存放 user-data 和 meta-data 的本地目录
   boot_wait      = "5s"   # 等待进入 GRUB 界面的时间，视机器性能可适当延长
   boot_key_interval = "50ms"
-  
+
   # GRUB 自动化按键指令
   boot_command = [
     "e", # 按 'e' 编辑当前引导项
     "<down><down><down><end><left><left><left><left>", # 定位到 linux 行并越过尾部的 ' ---'
     # 核心坑点说明：
-    # 1. ds=nocloud-net;s=... 这里的单反斜杠会被 Packer 转义，因此必须用 \\; 
+    # 1. ds=nocloud-net;s=... 这里的单反斜杠会被 Packer 转义，因此必须用 \\;
     #    确保发送到 GRUB 的是 \; 从而让 GRUB 将分号视为普通字符而非命令结束符。
     # 2. {{ .HTTPIP }} 和 {{ .HTTPPort }} 是 Packer 自动生成的本地文件服务器地址。
     " autoinstall ds=nocloud-net\\;s=http://{{ .HTTPIP }}:{{ .HTTPPort }}/<wait2>",
@@ -117,47 +118,50 @@ build {
     keep_input_artifact = true     # 保留 output-vmware-iso 文件夹，方便后续手动检查 VM
     output              = "ubuntu-22.04.box"
     # 注意：此处必须使用 "vmware" 关键字，Packer 才能正确识别并生成对应的 metadata.json
-    provider_override   = "vmware" 
+    provider_override   = "vmware"
   }
 }
 ```
+
 - `boot_command`：在 grub 启动菜单界面可以按 `esc` 进入 grub命令行，或者按 `e` 进入编辑模式，来设置启动参数；
-	- 多次测试在 grub命令行，配置中写的启动参数总是被吞前几个字符，所以最后改为按 `e` 进入编辑模式
+  - 多次测试在 grub命令行，配置中写的启动参数总是被吞前几个字符，所以最后改为按 `e` 进入编辑模式
 - 根据 [这个帖子](https://shantanoo-desai.github.io/posts/technology/packer-ubuntu-qemu/)，`boot_command` 中的 `ds=nocloud-net;s=http://xxx` 中的必须转义 `ds=nocloud-net;s=http://xxx` 才能正常触发 `cloud-init`
 
 ###### variables.pkr.hcl
 
-*packer/variables.pkr.hcl*
+_packer/variables.pkr.hcl_
+
 ```yaml
 variable "nexus_url" {
-  type        = string
-  description = "Nexus 仓库的基础地址"
+type        = string
+description = "Nexus 仓库的基础地址"
 }
 
 variable "iso_path" {
-  type        = string
-  description = "ISO 在仓库中的相对路径"
+type        = string
+description = "ISO 在仓库中的相对路径"
 }
 
 variable "iso_checksum" {
-  type        = string
-  description = "ISO 的 SHA256 校验和"
+type        = string
+description = "ISO 的 SHA256 校验和"
 }
 
 variable "ssh_username" {
-  type    = string
-  default = "ubuntu"
+type    = string
+default = "ubuntu"
 }
 
 variable "ssh_password" {
-  type    = string
-  default = "ubuntu"
+type    = string
+default = "ubuntu"
 }
 ```
 
 ###### ubuntu.auto.pkrvars.hcl
 
-*packer/ubuntu.auto.pkrvars.hcl*
+_packer/ubuntu.auto.pkrvars.hcl_
+
 ```yaml
 nexus_url    = "http://192.168.17.134:8081"
 iso_path     = "/repository/iso-storage/ubuntu-22.04.5-live-server-amd64.iso"
@@ -166,13 +170,15 @@ iso_checksum = "sha256:9bc6028870aef3f74f4e16b900008179e78b130e6b0b9a140635434a4
 ssh_username = "ubuntu"
 ssh_password = "ubuntu"
 ```
+
 - 将变量定义文件后缀改成 `.auto.pkrvars.hcl` 会自动变量赋值，Packer 会自动加载其中的数据，不需要在 `packer validate` `packer build` 的时候指定变量定义文件
 
 ###### user-data
 
 [[01 pxe 自动安装 ubuntu#user-data]]
 
-*packer/http/user-data*
+_packer/http/user-data_
+
 ```yaml
 #cloud-config
 autoinstall:
@@ -362,7 +368,8 @@ autoinstall:
 ###### meta-data
 
 [[01 pxe 自动安装 ubuntu#meta-data]]
-*packer/http/meta-data*
+_packer/http/meta-data_
+
 ```yaml
 instance-id: iid-ubuntu-autoinstall
 ```
@@ -370,11 +377,13 @@ instance-id: iid-ubuntu-autoinstall
 ## 开始使用 packer 构建
 
 初始化插件
+
 ```powershell
 packer init .
 ```
 
 格式化检查
+
 ```powershell
 packer fmt .
 ```
@@ -384,6 +393,7 @@ packer validate .
 ```
 
 开始构建
+
 ```powershell
 packer build .
 ```
@@ -391,16 +401,18 @@ packer build .
 ## 自动安装失败如何排查
 
 如果cloud-init没有正常起作用，安装卡住选择语言界面，按 **`Alt + F2`** (在 VMware 中可能需要按 `Ctrl + Alt + F2`) 切换到第二个虚拟终端，然后回车进入命令行。
+
 ```shell
 cat /proc/cmdline
 ```
+
 - 检查是否收到了参数
 
 ```shell
 cloud-init status
 ```
-- 查看 Cloud-init 运行状态
 
+- 查看 Cloud-init 运行状态
 
 ## Vagrant
 
@@ -421,12 +433,13 @@ cd vagrant
 vagrant init ubuntu2204
 ```
 
-*Vagrantfile*
+_Vagrantfile_
+
 ```ruby
   config.vm.provider "vmware_desktop" do |v|
     # Display the VirtualBox GUI when booting the machine
     v.gui = true
-    
+
     # Customize the amount of memory on the VM:
     v.memory = "1024"
     v.cpus = "2"
@@ -444,19 +457,21 @@ vagrant up --provider vmware_desktop
 ## 文档
 
 > [!note]+ 说明
+>
 > 1. user-data 中 autoinstall 下的 schema 都是 subiquity 文档中定义的 schema，
 > 2. 一些配置，如 apt 等，是和 curtin 合并的，可能最终都会转给 curtin，
 > 3. auinstall/user-data 下的 schema 是在 cloud-init 文档中定义的 schema，
 > 4. 能尽量在 subiquity 阶段把能配的都配了，就不要等系统启动后由 cloud-init service 来配置
-> 
+>
 > `autoinstall/early-commands` `autoinstall/late-commands` 都是在 subiquity 安装阶段执行的，机器重启之前，还是在安装介质的环境；
 > `autoinstall/user-data` 是在机器第一次重启之后，进入目标系统，由 cloud-init service 执行。
-> 
+>
 > 大体是这样，一些细节可能还需再研究研究
 
 subiquity 文档：[Autoinstall configuration reference manual - Ubuntu installation documentation](https://canonical-subiquity.readthedocs-hosted.com/en/latest/reference/autoinstall-reference.html#ai-identity)
 curtin 文档：[APT Source — curtin 23.1.1 documentation](https://curtin.readthedocs.io/en/latest/topics/apt_source.html#common-snippets)
 curtin apt 示例配置：
+
 - [apt-source.yaml « examples - curtin - [no description]](https://git.launchpad.net/curtin/tree/examples/apt-source.yaml)
 - [curtin/examples/apt-source.yaml at master · canonical/curtin](https://github.com/canonical/curtin/blob/master/examples/apt-source.yaml)
 
@@ -464,8 +479,6 @@ cloud-init 文档：[Module reference - cloud-init 25.3 documentation](https://c
 cloud-init user-data block 示例配置：[All cloud config examples - cloud-init 25.3 documentation](https://docs.cloud-init.io/en/latest/reference/examples.html)
 
 [Network configuration - cloud-init 25.3 documentation](https://cloudinit.readthedocs.io/en/latest/reference/network-config.html)
-
-
 
 [Cloud-init and autoinstall interaction - Ubuntu installation documentation](https://canonical-subiquity.readthedocs-hosted.com/en/latest/explanation/cloudinit-autoinstall-interaction.html)
 
@@ -475,14 +488,14 @@ cloud-init user-data block 示例配置：[All cloud config examples - cloud-ini
 # These directives affect the ephemeral system performing the installation.
 
 autoinstall:
-    # autoinstall directives must be specified here, not directly at the
-    # top level.  These directives are processed by the Ubuntu Installer,
-    # and configure the target system to be installed.
+  # autoinstall directives must be specified here, not directly at the
+  # top level.  These directives are processed by the Ubuntu Installer,
+  # and configure the target system to be installed.
 
-    user-data:
-        # cloud-init directives may also be optionally be specified here.
-        # These directives also affect the target system to be installed,
-        # and are processed on first boot.
+  user-data:
+    # cloud-init directives may also be optionally be specified here.
+    # These directives also affect the target system to be installed,
+    # and are processed on first boot.
 ```
 
 - `autoinstall:` 字段及其直接下级字段，给 Subiquity 用的，规定了安装程序应该如何配置目标磁盘，这些配置会被转化为真实的硬盘数据
@@ -494,12 +507,12 @@ packer 最后得到是 vmware workstaion 的 vm，或者 vsphere 的 vm，这是
 如果希望最后得到的是一个 `.iso` 文件，方便在物理机或其他环境手动安装，应该使用专门的 ISO 构建工具：
 
 - Cubic (Custom Ubuntu ISO Creator):
-    - 原理： 它会解压原始 ISO，让你进入一个虚拟终端（chroot），你可以在里面安装软件、修改内核参数、替换背景。
-    - 输出： 完成后它会重新封装并生成一个新的 `.iso`。
+  - 原理： 它会解压原始 ISO，让你进入一个虚拟终端（chroot），你可以在里面安装软件、修改内核参数、替换背景。
+  - 输出： 完成后它会重新封装并生成一个新的 `.iso`。
 
 - Debos / Mkosi:
-    - 原理： 通过 YAML 脚本定义操作系统内容。
-    - 输出： 可以直接配置输出格式为 `iso`。
+  - 原理： 通过 YAML 脚本定义操作系统内容。
+  - 输出： 可以直接配置输出格式为 `iso`。
 
 - LinuxKit:
-    - 如果你在构建容器化操作系统，它的 `linuxkit build -format iso-bios` 命令可以直接输出 ISO。
+  - 如果你在构建容器化操作系统，它的 `linuxkit build -format iso-bios` 命令可以直接输出 ISO。

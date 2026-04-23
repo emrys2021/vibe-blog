@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import type { Metadata } from 'next';
+import { getCategoryHref } from '@/lib/categories';
 import { getAllCategories } from '@/lib/posts';
 import { Prompt } from '@/components/Prompt';
 import { Container } from '@/components/Container';
@@ -24,10 +25,10 @@ export default function CategoriesPage() {
           {categories.map((bucket) => (
             <li key={bucket.category}>
               <Link
-                href={`/categories/${encodeURIComponent(bucket.category)}`}
+                href={getCategoryHref(bucket.segments)}
                 className="inline-flex items-baseline gap-1.5 px-2 py-1 border border-rule rounded hover:border-accent hover:text-accent transition-colors"
               >
-                <span className="text-accent">@{bucket.category}</span>
+                <span className="text-accent">@{bucket.label}</span>
                 <span className="text-xs text-fg-dim">{bucket.count}</span>
               </Link>
             </li>
