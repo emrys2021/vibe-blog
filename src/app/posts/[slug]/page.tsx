@@ -77,6 +77,7 @@ export default async function PostPage({ params }: Props) {
                   <Link
                     href={getCategoryHref(post.category)}
                     className="text-accent hover:text-accent-2"
+                    style={{ fontFamily: 'var(--font-prose)' }}
                   >
                     @{post.category}
                   </Link>
@@ -91,6 +92,7 @@ export default async function PostPage({ params }: Props) {
                         key={t}
                         href={`/tags/${encodeURIComponent(t.toLowerCase())}`}
                         className="text-accent-2 hover:text-accent"
+                        style={{ fontFamily: 'var(--font-prose)' }}
                       >
                         #{t}
                       </Link>

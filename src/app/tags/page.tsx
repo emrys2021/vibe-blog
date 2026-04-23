@@ -1,6 +1,6 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getAllTags } from '@/lib/posts';
+import { TaxonomyPill } from '@/components/TaxonomyPill';
 import { Prompt } from '@/components/Prompt';
 import { Container } from '@/components/Container';
 
@@ -20,21 +20,20 @@ export default function TagsPage() {
       {tags.length === 0 ? (
         <p className="text-sm text-fg-dim">no tags yet.</p>
       ) : (
-        <ul className="flex flex-wrap gap-2 text-sm">
-          {tags.map((bucket) => (
-            <li key={bucket.tag}>
-              <Link
-                href={`/tags/${encodeURIComponent(bucket.tag)}`}
-                className="inline-flex items-baseline gap-1.5 px-2 py-1 border border-rule rounded hover:border-accent hover:text-accent transition-colors"
-              >
-                <span className="text-accent-2">#{bucket.tag}</span>
-                <span className="text-xs text-fg-dim">
-                  {bucket.count}
-                </span>
-              </Link>
-            </li>
-          ))}
-        </ul>
+        <div className="rounded-lg border border-rule bg-bg-elev/35 p-4">
+          <ul className="flex flex-wrap gap-3 text-sm">
+            {tags.map((bucket) => (
+              <li key={bucket.tag}>
+                <TaxonomyPill
+                  href={`/tags/${encodeURIComponent(bucket.tag)}`}
+                  label={bucket.tag}
+                  count={bucket.count}
+                  variant="tag"
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </Container>
   );

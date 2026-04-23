@@ -30,12 +30,21 @@ export function PostCard({ post }: { post: PostMeta }) {
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-dim">
           <span>{post.readingTime}</span>
           {post.category ? (
-            <span className="text-accent">@{post.category}</span>
+            <span
+              className="text-accent"
+              style={{ fontFamily: 'var(--font-prose)' }}
+            >
+              @{post.category}
+            </span>
           ) : null}
           {(post.tags ?? []).length > 0 ? (
             <span className="flex flex-wrap gap-1.5">
               {post.tags!.map((t) => (
-                <span key={t} className="text-accent-2">
+                <span
+                  key={t}
+                  className="text-accent-2"
+                  style={{ fontFamily: 'var(--font-prose)' }}
+                >
                   #{t}
                 </span>
               ))}
