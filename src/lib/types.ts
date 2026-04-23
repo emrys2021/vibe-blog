@@ -2,6 +2,7 @@ export interface PostFrontmatter {
   title: string;
   date: string;
   description?: string;
+  category?: string;
   tags?: string[];
   draft?: boolean;
   cover?: string;
@@ -27,6 +28,12 @@ export interface TocItem {
 
 export interface TagBucket {
   tag: string;
+  count: number;
+  posts: PostMeta[];
+}
+
+export interface CategoryBucket {
+  category: string;
   count: number;
   posts: PostMeta[];
 }

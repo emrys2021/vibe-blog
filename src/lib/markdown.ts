@@ -8,6 +8,7 @@ import rehypePrettyCode from 'rehype-pretty-code';
 import rehypeStringify from 'rehype-stringify';
 import GithubSlugger from 'github-slugger';
 import type { TocItem } from './types';
+import { remarkCallout } from './remark-callout';
 
 const prettyCodeOptions = {
   theme: {
@@ -21,6 +22,7 @@ const prettyCodeOptions = {
 const processor = unified()
   .use(remarkParse)
   .use(remarkGfm)
+  .use(remarkCallout)
   .use(remarkRehype, { allowDangerousHtml: true })
   .use(rehypeSlug)
   .use(rehypeAutolinkHeadings, {

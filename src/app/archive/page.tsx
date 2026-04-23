@@ -43,6 +43,7 @@ export default function ArchivePage() {
                   </time>
                   <Link
                     href={`/posts/${post.slug}`}
+                    style={{ fontFamily: 'var(--font-prose)' }}
                     className="text-fg hover:text-accent transition-colors truncate"
                   >
                     {post.title}

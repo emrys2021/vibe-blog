@@ -51,7 +51,10 @@ export default async function PostPage({ params }: Props) {
         </aside>
 
         <article className="min-w-0">
-          <div className="text-xs text-fg-dim mb-3">
+          <div
+            className="text-xs text-fg-dim mb-3"
+            style={{ fontFamily: 'var(--font-prose)' }}
+          >
             <Prompt>cat posts/{post.slug}.md</Prompt>
           </div>
 
@@ -67,6 +70,17 @@ export default async function PostPage({ params }: Props) {
               <span>{post.readingTime}</span>
               <span>·</span>
               <span>{post.wordCount} words</span>
+              {post.category ? (
+                <>
+                  <span>·</span>
+                  <Link
+                    href={`/categories/${encodeURIComponent(post.category.toLowerCase())}`}
+                    className="text-accent hover:text-accent-2"
+                  >
+                    @{post.category}
+                  </Link>
+                </>
+              ) : null}
               {(post.tags ?? []).length > 0 ? (
                 <>
                   <span>·</span>

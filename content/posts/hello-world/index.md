@@ -2,6 +2,7 @@
 title: "Hello, World"
 date: "2026-04-22"
 description: "The obligatory first post — a tour of what this blog can do."
+category: meta
 tags: ["meta", "intro"]
 ---
 

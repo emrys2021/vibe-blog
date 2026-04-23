@@ -4,7 +4,7 @@ type Width = 'narrow' | 'wide';
 
 const widthClass: Record<Width, string> = {
   narrow: 'max-w-3xl',
-  wide: 'max-w-5xl',
+  wide: 'max-w-6xl',
 };
 
 /**

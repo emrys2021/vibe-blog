@@ -3,7 +3,13 @@ import fs from 'node:fs';
 import path from 'node:path';
 import matter from 'gray-matter';
 import readingTime from 'reading-time';
-import type { Post, PostFrontmatter, PostMeta, TagBucket } from './types';
+import type {
+  CategoryBucket,
+  Post,
+  PostFrontmatter,
+  PostMeta,
+  TagBucket,
+} from './types';
 import { extractToc, renderMarkdown } from './markdown';
 
 const CONTENT_ROOT = path.join(process.cwd(), 'content', 'posts');
@@ -44,6 +50,9 @@ function parseFrontmatter(raw: string, fallbackTitle: string): { data: PostFront
     title: fm.title ?? fallbackTitle,
     date: fm.date ? new Date(fm.date).toISOString() : new Date().toISOString(),
     description: fm.description,
+    category: typeof fm.category === 'string' && fm.category.trim()
+      ? fm.category.trim()
+      : undefined,
     tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
     draft: Boolean(fm.draft),
     cover: fm.cover,
@@ -134,6 +143,24 @@ export function getPostsByTag(tag: string): PostMeta[] {
   return getAllPosts().filter((p) =>
     (p.tags ?? []).some((t) => t.toLowerCase() === lower),
   );
+}
+
+export function getAllCategories(): CategoryBucket[] {
+  const map = new Map<string, PostMeta[]>();
+  for (const post of getAllPosts()) {
+    if (!post.category) continue;
+    const key = post.category.toLowerCase();
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(post);
+  }
+  return [...map.entries()]
+    .map(([category, posts]) => ({ category, count: posts.length, posts }))
+    .sort((a, b) => b.count - a.count || a.category.localeCompare(b.category));
+}
+
+export function getPostsByCategory(category: string): PostMeta[] {
+  const lower = safeDecode(category).toLowerCase();
+  return getAllPosts().filter((p) => p.category?.toLowerCase() === lower);
 }
 
 function safeDecode(s: string): string {

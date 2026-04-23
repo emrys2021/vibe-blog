@@ -29,6 +29,9 @@ export function PostCard({ post }: { post: PostMeta }) {
         ) : null}
         <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-fg-dim">
           <span>{post.readingTime}</span>
+          {post.category ? (
+            <span className="text-accent">@{post.category}</span>
+          ) : null}
           {(post.tags ?? []).length > 0 ? (
             <span className="flex flex-wrap gap-1.5">
               {post.tags!.map((t) => (
