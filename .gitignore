@@ -10,6 +10,7 @@ out/
 build/
 dist/
 public/post-assets/
+public/command-menu-index.json
 .cache/
 
 # misc

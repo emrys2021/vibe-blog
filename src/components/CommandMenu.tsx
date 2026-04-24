@@ -1,6 +1,6 @@
 'use client';
 
-import { forwardRef, type ReactNode } from 'react';
+import { forwardRef } from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Action, ActionImpl } from 'kbar';
@@ -11,6 +11,7 @@ import {
   KBarProvider,
   KBarResults,
   KBarSearch,
+  VisualState,
   useKBar,
   useMatches,
   useRegisterActions,
@@ -19,6 +20,7 @@ import { getCategoryHref } from '@/lib/categories';
 import { applyTheme, getTheme, type Theme } from '@/lib/theme';
 import type { CommandMenuData } from '@/lib/types';
 import { siteConfig } from '../../blog.config';
+import { COMMAND_MENU_TOGGLE_EVENT } from './command-menu-events';
 
 const SECTIONS = {
   pages: { name: 'Pages', priority: 600 },
@@ -29,9 +31,9 @@ const SECTIONS = {
   preferences: { name: 'Preferences', priority: 100 },
 } as const;
 
-interface CommandMenuProviderProps {
-  children: ReactNode;
+interface CommandMenuOverlayProps {
   data: CommandMenuData;
+  initialToggleToken?: number;
 }
 
 interface PageHeading {
@@ -40,7 +42,10 @@ interface PageHeading {
   text: string;
 }
 
-export function CommandMenuProvider({ children, data }: CommandMenuProviderProps) {
+export function CommandMenuOverlay({
+  data,
+  initialToggleToken = 0,
+}: CommandMenuOverlayProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [pageHeadings, setPageHeadings] = useState<PageHeading[]>([]);
@@ -189,11 +194,38 @@ export function CommandMenuProvider({ children, data }: CommandMenuProviderProps
         animations: { enterMs: 120, exitMs: 100 },
       }}
     >
+      <CommandMenuToggleBridge initialToggleToken={initialToggleToken} />
       <PageScopedActions pathname={pathname} headings={pageHeadings} />
-      {children}
       <CommandMenuPalette />
     </KBarProvider>
   );
+}
+
+function CommandMenuToggleBridge({
+  initialToggleToken,
+}: {
+  initialToggleToken: number;
+}) {
+  const { query } = useKBar();
+
+  useEffect(() => {
+    const handleToggle = () => {
+      query.toggle();
+    };
+
+    window.addEventListener(COMMAND_MENU_TOGGLE_EVENT, handleToggle);
+    return () => {
+      window.removeEventListener(COMMAND_MENU_TOGGLE_EVENT, handleToggle);
+    };
+  }, [query]);
+
+  useEffect(() => {
+    if (initialToggleToken === 0) return;
+
+    query.setVisualState(VisualState.showing);
+  }, [initialToggleToken, query]);
+
+  return null;
 }
 
 function PageScopedActions({

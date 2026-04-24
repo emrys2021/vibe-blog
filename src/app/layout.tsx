@@ -2,9 +2,8 @@ import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
-import { wenkai } from './fonts';
-import { getCommandMenuData } from '@/lib/command-menu';
-import { CommandMenuProvider } from '@/components/CommandMenu';
+import { jetbrainsMono, wenkai } from './fonts';
+import { CommandMenuRoot } from '@/components/CommandMenuRoot';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { siteConfig } from '../../blog.config';
@@ -25,8 +24,6 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const commandMenuData = getCommandMenuData();
-
   // Inline script avoids the dark→light flash on first paint.
   const themeBoot = `
     (function() {
@@ -43,19 +40,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       lang="en"
       data-theme="dark"
       suppressHydrationWarning
-      className={wenkai.variable}
+      className={`${jetbrainsMono.variable} ${wenkai.variable}`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
       </head>
       <body className="min-h-screen flex flex-col">
-        <CommandMenuProvider data={commandMenuData}>
-          <Header />
-          <main className="flex-1 w-full">{children}</main>
-          <Footer />
-          <Analytics />
-          <SpeedInsights />
-        </CommandMenuProvider>
+        <Header />
+        <main className="flex-1 w-full">{children}</main>
+        <Footer />
+        <CommandMenuRoot />
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

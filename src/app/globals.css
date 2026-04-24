@@ -5,10 +5,10 @@
 @theme {
   /* Global default: Latin keeps the mono feel, CJK falls back to 霞鹜文楷
      across the whole site unless a component opts into something else. */
-  --font-mono: 'JetBrains Mono', 'Fira Code', var(--font-wenkai),
+  --font-mono: var(--font-jetbrains-mono), 'Fira Code', var(--font-wenkai),
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
     'Courier New', monospace;
-  /* 霞鹜文楷 — self-hosted + preloaded via next/font/local. */
+  /* JetBrains Mono + 霞鹜文楷 — self-hosted + preloaded via next/font/local. */
   --font-prose: var(--font-wenkai), var(--font-mono);
   --font-sans: var(--font-mono);
 
@@ -34,14 +34,6 @@
   --color-danger: #c9302c;
   --color-rule: #e3e7eb;
   --color-warning: #8a6d1a;
-}
-
-@font-face {
-  font-family: 'JetBrains Mono';
-  font-display: swap;
-  font-weight: 100 900;
-  src: url('https://cdn.jsdelivr.net/gh/JetBrains/JetBrainsMono/fonts/variable/JetBrainsMono[wght].woff2')
-    format('woff2-variations');
 }
 
 /* ----- base ----- */

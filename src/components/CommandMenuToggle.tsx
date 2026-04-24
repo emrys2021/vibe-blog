@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useKBar } from 'kbar';
+import {
+  dispatchCommandMenuPreload,
+  dispatchCommandMenuToggle,
+} from './command-menu-events';
 
 export function CommandMenuToggle() {
-  const { query } = useKBar();
   const [modifier, setModifier] = useState('Ctrl');
 
   useEffect(() => {
@@ -16,7 +18,10 @@ export function CommandMenuToggle() {
   return (
     <button
       type="button"
-      onClick={query.toggle}
+      onClick={dispatchCommandMenuToggle}
+      onMouseEnter={dispatchCommandMenuPreload}
+      onFocus={dispatchCommandMenuPreload}
+      onTouchStart={dispatchCommandMenuPreload}
       aria-label="open command palette"
       className="inline-flex h-8 items-center gap-1.5 rounded-md border border-rule bg-bg-elev/45 px-2 text-[11px] text-fg-dim transition-colors hover:border-accent hover:text-accent"
       title={`${modifier} + K`}
