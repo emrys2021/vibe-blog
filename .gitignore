@@ -2,6 +2,7 @@
 node_modules/
 .pnp/
 .pnp.js
+.venv/
 
 # build
 .next/
@@ -9,6 +10,7 @@ out/
 build/
 dist/
 public/post-assets/
+.cache/
 
 # misc
 .DS_Store

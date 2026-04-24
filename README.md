@@ -7,6 +7,7 @@ A geek-flavored, file-system-driven personal blog. Drop a markdown file into `co
 - `Ctrl/Cmd + K` command palette for post search, page jumps, theme actions, and section navigation
 - Obsidian-friendly bundled posts with `attachments/` synced to `public/post-assets/`
 - Article UX touches: reading progress bar, heading permalinks, code copy buttons, and image lightbox
+- Self-hosted, subsetted 霞鹜文楷 with preload to reduce first-paint font swaps
 - File-system-driven content model with categories, tags, RSS, and sitemap generation
 
 ## Stack
@@ -17,6 +18,7 @@ A geek-flavored, file-system-driven personal blog. Drop a markdown file into `co
 - **remark / rehype** + **shiki** for markdown rendering and code highlighting
 - **Obsidian-friendly bundled posts** with static asset syncing
 - **kbar** for command palette interactions
+- **next/font/local** for self-hosted WenKai preload
 - **gray-matter** for frontmatter
 
 ## Quickstart
@@ -74,6 +76,8 @@ draft: false
 - **Colors / fonts** → CSS custom properties in `src/app/globals.css` (`@theme` block)
 - **Markdown pipeline** → `src/lib/markdown.ts` (add remark/rehype plugins here)
 - **Bundled post asset sync** → `scripts/sync-post-assets.mjs`
+- **WenKai subset rebuild** → `npm run font:subset`
+  Requires `pyftsubset` from `fonttools` (for example inside `.venv`) and will auto-download the upstream `LXGWWenKaiScreen.ttf` source font into `.cache/fonts/` when missing.
 
 ## Deploying
 

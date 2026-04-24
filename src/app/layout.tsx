@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
+import { wenkai } from './fonts';
 import { getCommandMenuData } from '@/lib/command-menu';
 import { CommandMenuProvider } from '@/components/CommandMenu';
 import { Header } from '@/components/Header';
@@ -38,18 +39,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   `;
 
   return (
-    <html lang="en" data-theme="dark" suppressHydrationWarning>
+    <html
+      lang="en"
+      data-theme="dark"
+      suppressHydrationWarning
+      className={wenkai.variable}
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeBoot }} />
-        {/* 霞鹜文楷 (LXGW WenKai Screen) — used by .prose body. Loaded from CDN
-            so we don't ship a 5MB+ webfont in the bundle. preconnect speeds up
-            the handshake; the stylesheet itself defines @font-face entries that
-            lazy-load WOFF2 subsets only when characters are actually used. */}
-        <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="" />
-        <link
-          rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/lxgw-wenkai-screen-webfont@1.7.0/style.css"
-        />
       </head>
       <body className="min-h-screen flex flex-col">
         <CommandMenuProvider data={commandMenuData}>

@@ -5,6 +5,7 @@
   "description": "A geek-style personal blog. Drop markdown into content/posts and it just works.",
   "scripts": {
     "sync:assets": "node scripts/sync-post-assets.mjs",
+    "font:subset": "node scripts/build-font-subset.mjs",
     "predev": "npm run sync:assets",
     "prebuild": "npm run sync:assets",
     "prestart": "npm run sync:assets",
