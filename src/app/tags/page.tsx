@@ -12,7 +12,7 @@ export default function TagsPage() {
   const tags = getAllTags();
 
   return (
-    <Container>
+    <Container width="medium">
       <h1 className="text-sm text-fg-dim mb-6">
         <Prompt>grep -roh &quot;tags:.*&quot; ./posts | sort | uniq -c</Prompt>
       </h1>

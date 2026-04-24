@@ -39,3 +39,29 @@ export interface CategoryBucket {
   count: number;
   posts: PostMeta[];
 }
+
+export interface CommandMenuPost {
+  slug: string;
+  title: string;
+  description?: string;
+  category?: string;
+  tags: string[];
+  searchText: string;
+}
+
+export interface CommandMenuTag {
+  tag: string;
+  count: number;
+}
+
+export interface CommandMenuCategory {
+  category: string;
+  label: string;
+  count: number;
+}
+
+export interface CommandMenuData {
+  posts: CommandMenuPost[];
+  tags: CommandMenuTag[];
+  categories: CommandMenuCategory[];
+}

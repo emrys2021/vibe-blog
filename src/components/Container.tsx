@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
 
-type Width = 'narrow' | 'wide';
+type Width = 'narrow' | 'medium' | 'wide';
 
 const widthClass: Record<Width, string> = {
   narrow: 'max-w-3xl',
+  medium: 'max-w-4xl',
   wide: 'max-w-6xl',
 };
 

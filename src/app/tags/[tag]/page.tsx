@@ -26,7 +26,7 @@ export default async function TagPage({ params }: Props) {
   if (posts.length === 0) notFound();
 
   return (
-    <Container>
+    <Container width="medium">
       <h1 className="text-sm text-fg-dim mb-6">
         <Prompt>grep -lr &quot;tag:{decoded}&quot; ./posts</Prompt>
       </h1>

@@ -30,7 +30,7 @@ export default async function CategoryPage({ params }: Props) {
   const label = bucket.label;
 
   return (
-    <Container>
+    <Container width="medium">
       <h1 className="text-sm text-fg-dim mb-6">
         <Prompt>ls ./posts/{label}/</Prompt>
       </h1>

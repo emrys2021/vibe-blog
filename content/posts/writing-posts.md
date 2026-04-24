@@ -27,10 +27,17 @@ When the post needs assets (images, attachments), give it a folder with an `inde
 content/posts/
   my-illustrated-essay/
     index.md
-    diagram.png
+    attachments/
+      diagram.png
 ```
 
-The slug is the folder name. Reference assets with relative paths.
+The slug is the folder name. This layout is Obsidian-friendly:
+
+- keep images in `attachments/`
+- plain relative paths like `![diagram](attachments/diagram.png)` work
+- Obsidian embeds like `![[diagram.png]]` also work and are rewritten to static URLs automatically
+- bundled assets are synced into `public/post-assets/` before `dev`, `build`, and `start`
+- if you add or rename attachments while the dev server is already running, rerun `npm run sync:assets`
 
 ## Frontmatter
 

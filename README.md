@@ -2,12 +2,21 @@
 
 A geek-flavored, file-system-driven personal blog. Drop a markdown file into `content/posts/`, run `next build`, ship a static site.
 
+## Highlights
+
+- `Ctrl/Cmd + K` command palette for post search, page jumps, theme actions, and section navigation
+- Obsidian-friendly bundled posts with `attachments/` synced to `public/post-assets/`
+- Article UX touches: reading progress bar, heading permalinks, code copy buttons, and image lightbox
+- File-system-driven content model with categories, tags, RSS, and sitemap generation
+
 ## Stack
 
 - **Next.js 15** (App Router, RSC, fully static output)
 - **TypeScript** strict
 - **Tailwind CSS v4**
 - **remark / rehype** + **shiki** for markdown rendering and code highlighting
+- **Obsidian-friendly bundled posts** with static asset syncing
+- **kbar** for command palette interactions
 - **gray-matter** for frontmatter
 
 ## Quickstart
@@ -28,8 +37,11 @@ content/posts/
   single-file-post.md
   bundled-post/
     index.md
-    diagram.png
+    attachments/
+      diagram.png
 ```
+
+Bundled posts are synced into `public/post-assets/` before `dev`, `build`, and `start`. If you add or rename attachments while `next dev` is already running, rerun `npm run sync:assets` or restart the dev server.
 
 Frontmatter:
 
@@ -49,11 +61,11 @@ draft: false
 .
 ├── blog.config.ts        # site name, author, nav, social
 ├── content/posts/        # ← write here
-├── scripts/new-post.mjs  # `npm run new`
+├── scripts/              # post scaffolding + bundled asset sync
 └── src/
     ├── app/              # routes (home / posts / tags / archive / about / rss / sitemap)
-    ├── components/       # Header, Footer, PostCard, Toc, ThemeToggle, Prompt
-    └── lib/              # posts.ts (scanner), markdown.ts (renderer), types, format
+    ├── components/       # Header, command palette, post enhancements, TOC, cards
+    └── lib/              # posts scanner, markdown renderer, command menu data, theme utils
 ```
 
 ## Customizing
@@ -61,6 +73,7 @@ draft: false
 - **Branding & nav** → `blog.config.ts`
 - **Colors / fonts** → CSS custom properties in `src/app/globals.css` (`@theme` block)
 - **Markdown pipeline** → `src/lib/markdown.ts` (add remark/rehype plugins here)
+- **Bundled post asset sync** → `scripts/sync-post-assets.mjs`
 
 ## Deploying
 

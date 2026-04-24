@@ -2,7 +2,7 @@
 /**
  * Scaffold a new post.
  *   npm run new -- "My Post Title"
- *   npm run new -- "My Post Title" --bundle   # creates folder + index.md
+ *   npm run new -- "My Post Title" --bundle   # creates folder + index.md + attachments/
  */
 import fs from 'node:fs';
 import path from 'node:path';
@@ -38,7 +38,10 @@ if (fs.existsSync(target)) {
   process.exit(1);
 }
 
-if (bundle) fs.mkdirSync(path.dirname(target), { recursive: true });
+if (bundle) {
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.mkdirSync(path.join(path.dirname(target), 'attachments'), { recursive: true });
+}
 
 const today = new Date().toISOString().slice(0, 10);
 const body = `---

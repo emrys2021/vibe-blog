@@ -10,6 +10,12 @@ import type { TocItem } from '@/lib/types';
  */
 export function Toc({ items }: { items: TocItem[] }) {
   const [activeId, setActiveId] = useState<string>('');
+  const visibleDepths = [...new Set(items.map((item) => item.depth))].sort(
+    (left, right) => left - right,
+  );
+  const depthLevelMap = new Map(
+    visibleDepths.map((depth, index) => [depth, index]),
+  );
 
   useEffect(() => {
     if (items.length === 0) return;
@@ -50,10 +56,12 @@ export function Toc({ items }: { items: TocItem[] }) {
       <ul className="space-y-1.5 border-l border-rule">
         {items.map((item) => {
           const isActive = item.id === activeId;
+          const visualLevel = depthLevelMap.get(item.depth) ?? 0;
+          const isDeep = item.depth >= 5;
           return (
             <li
               key={item.id}
-              style={{ paddingLeft: `${0.75 + (item.depth - 2) * 0.9}rem` }}
+              style={{ paddingLeft: `${0.7 + visualLevel * 0.75}rem` }}
               className={
                 isActive
                   ? '-ml-0.5 border-l-2 border-accent'
@@ -63,7 +71,9 @@ export function Toc({ items }: { items: TocItem[] }) {
               <a
                 href={`#${item.id}`}
                 style={{ fontFamily: 'var(--font-prose)' }}
-                className={`block py-0.5 transition-colors leading-snug ${
+                className={`block py-0.5 leading-snug transition-colors ${
+                  isDeep ? 'text-[11px]' : ''
+                } ${
                   isActive
                     ? 'text-accent font-medium'
                     : 'text-fg-dim hover:text-accent'

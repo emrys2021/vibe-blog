@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
+import { getCommandMenuData } from '@/lib/command-menu';
+import { CommandMenuProvider } from '@/components/CommandMenu';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
 import { siteConfig } from '../../blog.config';
@@ -22,6 +24,8 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const commandMenuData = getCommandMenuData();
+
   // Inline script avoids the dark→light flash on first paint.
   const themeBoot = `
     (function() {
@@ -48,11 +52,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body className="min-h-screen flex flex-col">
-        <Header />
-        <main className="flex-1 w-full">{children}</main>
-        <Footer />
-        <Analytics />
-        <SpeedInsights />
+        <CommandMenuProvider data={commandMenuData}>
+          <Header />
+          <main className="flex-1 w-full">{children}</main>
+          <Footer />
+          <Analytics />
+          <SpeedInsights />
+        </CommandMenuProvider>
       </body>
     </html>
   );

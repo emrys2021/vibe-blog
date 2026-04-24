@@ -13,7 +13,7 @@ export default function ArchivePage() {
   const grouped = groupByYear(getAllPosts());
 
   return (
-    <Container>
+    <Container width="medium">
       <h1 className="text-sm text-fg-dim mb-6">
         <Prompt>find ./posts -type f -name &quot;*.md&quot; | sort -r</Prompt>
       </h1>

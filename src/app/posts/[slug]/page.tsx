@@ -2,11 +2,12 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCategoryHref } from '@/lib/categories';
-import { getAdjacentPosts, getAllSlugs, getPost } from '@/lib/posts';
+import { getAdjacentPosts, getAllSlugs, getPost, getPostMeta } from '@/lib/posts';
 import { formatDate } from '@/lib/format';
 import { Prompt } from '@/components/Prompt';
 import { Toc } from '@/components/Toc';
 import { Container } from '@/components/Container';
+import { PostEnhancements } from '@/components/PostEnhancements';
 import { siteConfig } from '../../../../blog.config';
 
 interface Props {
@@ -19,7 +20,7 @@ export async function generateStaticParams() {
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPost(slug);
+  const post = getPostMeta(slug);
   if (!post) return {};
   return {
     title: post.title,
@@ -43,6 +44,7 @@ export default async function PostPage({ params }: Props) {
 
   return (
     <Container width="wide">
+      <PostEnhancements />
       <div className="md:grid md:grid-cols-[10rem_1fr] md:gap-6 lg:grid-cols-[12rem_1fr] lg:gap-10 xl:grid-cols-[14rem_1fr] xl:gap-12">
         {/* left sidebar TOC: sticky from md (≥768px) up */}
         <aside className="hidden md:block">
@@ -51,7 +53,7 @@ export default async function PostPage({ params }: Props) {
           </div>
         </aside>
 
-        <article className="min-w-0">
+        <article className="min-w-0" data-post-article>
           <div
             className="text-xs text-fg-dim mb-3"
             style={{ fontFamily: 'var(--font-prose)' }}

@@ -5,6 +5,7 @@ import matter from 'gray-matter';
 import readingTime from 'reading-time';
 import type {
   CategoryBucket,
+  CommandMenuPost,
   Post,
   PostFrontmatter,
   PostMeta,
@@ -21,6 +22,18 @@ import { extractToc, renderMarkdown } from './markdown';
 
 const CONTENT_ROOT = path.join(process.cwd(), 'content', 'posts');
 
+interface MarkdownSource {
+  slug: string;
+  absPath: string;
+  bundled: boolean;
+  postDir?: string;
+}
+
+interface RenderedPostCacheEntry {
+  mtimeMs: number;
+  post: Post;
+}
+
 /**
  * Walk content/posts and return every entry that looks like a post.
  *
@@ -28,22 +41,28 @@ const CONTENT_ROOT = path.join(process.cwd(), 'content', 'posts');
  *   content/posts/<slug>.md
  *   content/posts/<slug>/index.md   ← lets a post carry its own assets
  */
-function collectMarkdownFiles(): { slug: string; absPath: string }[] {
+function collectMarkdownFiles(): MarkdownSource[] {
   if (!fs.existsSync(CONTENT_ROOT)) return [];
   const entries = fs.readdirSync(CONTENT_ROOT, { withFileTypes: true });
-  const results: { slug: string; absPath: string }[] = [];
+  const results: MarkdownSource[] = [];
 
   for (const entry of entries) {
     const entryPath = path.join(CONTENT_ROOT, entry.name);
     if (entry.isDirectory()) {
       const indexPath = path.join(entryPath, 'index.md');
       if (fs.existsSync(indexPath)) {
-        results.push({ slug: entry.name, absPath: indexPath });
+        results.push({
+          slug: entry.name,
+          absPath: indexPath,
+          bundled: true,
+          postDir: entryPath,
+        });
       }
     } else if (entry.isFile() && entry.name.endsWith('.md')) {
       results.push({
         slug: entry.name.replace(/\.md$/, ''),
         absPath: entryPath,
+        bundled: false,
       });
     }
   }
@@ -84,6 +103,8 @@ function toMeta(slug: string, raw: string): PostMeta {
  * appear without a server restart.
  */
 let postsCache: PostMeta[] | null = null;
+let searchDocumentsCache: CommandMenuPost[] | null = null;
+const renderedPostCache = new Map<string, RenderedPostCacheEntry>();
 
 export function getAllPosts(): PostMeta[] {
   if (postsCache && process.env.NODE_ENV === 'production') return postsCache;
@@ -100,24 +121,80 @@ export function getAllPosts(): PostMeta[] {
   return posts;
 }
 
+export function getSearchDocuments(): CommandMenuPost[] {
+  if (searchDocumentsCache && process.env.NODE_ENV === 'production') {
+    return searchDocumentsCache;
+  }
+
+  const documents = collectMarkdownFiles()
+    .map(({ slug, absPath }) => {
+      const raw = fs.readFileSync(absPath, 'utf8');
+      const meta = toMeta(slug, raw);
+      const { content } = parseFrontmatter(raw, slug);
+
+      return {
+        draft: Boolean(meta.draft),
+        document: {
+          slug,
+          title: meta.title,
+          description: meta.description,
+          category: meta.category,
+          tags: meta.tags ?? [],
+          searchText: normalizeSearchText([
+            meta.title,
+            meta.description,
+            meta.category,
+            ...(meta.tags ?? []),
+            content,
+          ].filter(Boolean).join('\n')),
+        },
+      };
+    })
+    .filter((entry) => process.env.NODE_ENV === 'development' || !entry.draft)
+    .map((entry) => entry.document);
+
+  searchDocumentsCache = documents;
+  return documents;
+}
+
 export function getAllSlugs(): string[] {
   return getAllPosts().map((p) => p.slug);
 }
 
-export async function getPost(slug: string): Promise<Post | null> {
-  // Next.js dev mode does NOT URL-decode dynamic route params for us, while
-  // prod (via generateStaticParams) matches against the raw string. Decoding
-  // unconditionally is safe — already-decoded slugs are unaffected unless they
-  // contain a literal '%', which filenames effectively never do.
-  const decoded = safeDecode(slug);
-  const file = collectMarkdownFiles().find((f) => f.slug === decoded);
+export function getPostMeta(slug: string): PostMeta | null {
+  const file = findMarkdownSource(slug);
   if (!file) return null;
+
+  const cached = getCachedRenderedPost(file);
+  if (cached) {
+    return cached;
+  }
+
+  const raw = fs.readFileSync(file.absPath, 'utf8');
+  return toMeta(file.slug, raw);
+}
+
+export async function getPost(slug: string): Promise<Post | null> {
+  const file = findMarkdownSource(slug);
+  if (!file) return null;
+
+  const cached = getCachedRenderedPost(file);
+  if (cached) return cached;
+
   const raw = fs.readFileSync(file.absPath, 'utf8');
   const meta = toMeta(file.slug, raw);
   const { content } = parseFrontmatter(raw, file.slug);
-  const html = await renderMarkdown(content);
+  const html = await renderMarkdown(content, {
+    slug: file.slug,
+    postDir: file.bundled ? file.postDir : undefined,
+  });
   const toc = extractToc(content);
-  return { ...meta, raw: content, html, toc };
+  const post = { ...meta, raw: content, html, toc };
+  renderedPostCache.set(file.absPath, {
+    mtimeMs: getSourceMtimeMs(file.absPath),
+    post,
+  });
+  return post;
 }
 
 export function getAdjacentPosts(slug: string): { prev: PostMeta | null; next: PostMeta | null } {
@@ -204,6 +281,39 @@ function safeDecode(s: string): string {
   } catch {
     return s;
   }
+}
+
+function findMarkdownSource(slug: string): MarkdownSource | null {
+  // Next.js dev mode does NOT URL-decode dynamic route params for us, while
+  // prod (via generateStaticParams) matches against the raw string. Decoding
+  // unconditionally is safe — already-decoded slugs are unaffected unless they
+  // contain a literal '%', which filenames effectively never do.
+  const decoded = safeDecode(slug);
+  return collectMarkdownFiles().find((file) => file.slug === decoded) ?? null;
+}
+
+function getCachedRenderedPost(file: MarkdownSource): Post | null {
+  const cached = renderedPostCache.get(file.absPath);
+  if (!cached) return null;
+  if (cached.mtimeMs !== getSourceMtimeMs(file.absPath)) return null;
+  return cached.post;
+}
+
+function getSourceMtimeMs(absPath: string): number {
+  return fs.statSync(absPath).mtimeMs;
+}
+
+function normalizeSearchText(raw: string): string {
+  return raw
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, ' $1 ')
+    .replace(/!\[\[[^\]]+\]\]/g, ' ')
+    .replace(/\[\[([^\]|]+)\|?([^\]]+)?\]\]/g, ' $1 $2 ')
+    .replace(/!\[[^\]]*]\([^)]+\)/g, ' ')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, ' $1 ')
+    .replace(/[#>*_~|-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 export function groupByYear(posts: PostMeta[]): { year: number; posts: PostMeta[] }[] {

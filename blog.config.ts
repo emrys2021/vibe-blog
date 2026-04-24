@@ -21,7 +21,7 @@ export const siteConfig = {
     { href: '/about', label: 'about' },
   ],
   social: [
-    { label: 'github', href: 'https://github.com/' },
+    { label: 'github', href: 'https://github.com/emrys2021' },
     { label: 'rss', href: '/rss.xml' },
   ],
   postsPerPage: 10,

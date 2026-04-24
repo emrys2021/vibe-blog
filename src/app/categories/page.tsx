@@ -13,7 +13,7 @@ export default function CategoriesPage() {
   const categories = getAllCategories();
 
   return (
-    <Container>
+    <Container width="medium">
       <h1 className="text-sm text-fg-dim mb-6">
         <Prompt>ls -d ./posts/*/</Prompt>
       </h1>
