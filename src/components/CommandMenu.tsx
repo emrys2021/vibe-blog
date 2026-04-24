@@ -280,7 +280,22 @@ function PageScopedActions({
 
 function CommandMenuPalette() {
   const { results } = useMatches();
-  const { searchQuery } = useKBar((state) => ({ searchQuery: state.searchQuery }));
+  const { searchQuery, actions, rootActionId } = useKBar((state) => ({
+    searchQuery: state.searchQuery,
+    actions: state.actions,
+    rootActionId: state.currentRootActionId,
+  }));
+  const parsedSearch = useMemo(
+    () => parseSearchQuery(searchQuery),
+    [searchQuery],
+  );
+  const visibleResults = useMemo(() => {
+    if (parsedSearch.mode === 'all') {
+      return results;
+    }
+
+    return getScopedResults(actions, rootActionId ?? null, parsedSearch);
+  }, [actions, parsedSearch, results, rootActionId]);
   const searchStyle = containsCjk(searchQuery)
     ? { fontFamily: 'var(--font-prose)' as const }
     : undefined;
@@ -300,25 +315,27 @@ function CommandMenuPalette() {
             />
           </div>
 
-          {results.length === 0 ? (
+          {visibleResults.length === 0 ? (
             <div className="px-4 py-6 text-sm text-fg-dim">
-              no matches. try a post title, tag, page, or action keyword.
+              {getEmptyStateMessage(parsedSearch)}
             </div>
           ) : (
-            <KBarResults
-              items={results}
-              maxHeight={560}
-              onRender={({ item, active }) =>
-                typeof item === 'string' ? (
-                  <div className="px-4 pb-2 pt-4 text-[10px] uppercase tracking-[0.24em] text-fg-dim first:pt-3">
-                    {item}
-                  </div>
-                ) : (
-                <ResultItem action={item} active={active} />
-              )
-            }
-          />
-        )}
+            <div className="pb-2">
+              <KBarResults
+                items={visibleResults}
+                maxHeight={560}
+                onRender={({ item, active }) =>
+                  typeof item === 'string' ? (
+                    <div className="px-4 pb-2 pt-4 text-[10px] uppercase tracking-[0.24em] text-fg-dim first:pt-3">
+                      {item}
+                    </div>
+                  ) : (
+                  <ResultItem action={item} active={active} />
+                )
+              }
+            />
+            </div>
+          )}
       </KBarAnimator>
       </KBarPositioner>
     </KBarPortal>
@@ -392,6 +409,211 @@ const ResultItem = forwardRef<HTMLDivElement, { action: ActionImpl; active: bool
 
 function containsCjk(value?: string | null): boolean {
   return Boolean(value && /[\u3400-\u4dbf\u4e00-\u9fff\uf900-\ufaff]/.test(value));
+}
+
+type SearchMode = 'all' | 'categories' | 'tags' | 'commands';
+
+interface ParsedSearchQuery {
+  mode: SearchMode;
+  term: string;
+}
+
+function parseSearchQuery(query: string): ParsedSearchQuery {
+  const trimmed = query.trim();
+  if (!trimmed) {
+    return { mode: 'all', term: '' };
+  }
+
+  const prefix = trimmed[0];
+  const term = trimmed.slice(1).trim();
+
+  switch (prefix) {
+    case '@':
+      return { mode: 'categories', term };
+    case '#':
+      return { mode: 'tags', term };
+    case '>':
+      return { mode: 'commands', term };
+    default:
+      return { mode: 'all', term: trimmed };
+  }
+}
+
+function getScopedResults(
+  actions: Record<string, ActionImpl>,
+  rootActionId: string | null,
+  parsedSearch: ParsedSearchQuery,
+): Array<string | ActionImpl> {
+  const rootActions = getVisibleRootActions(actions, rootActionId);
+  const searchableActions = collectSearchableActions(rootActions);
+  const matches = searchableActions
+    .filter((action) => matchesSearchMode(action, parsedSearch.mode))
+    .map((action) => ({
+      action,
+      score: scoreAction(action, parsedSearch.term),
+    }))
+    .filter((entry): entry is { action: ActionImpl; score: number } => entry.score !== null)
+    .sort((left, right) => {
+      if (right.score !== left.score) return right.score - left.score;
+      if (right.action.priority !== left.action.priority) {
+        return right.action.priority - left.action.priority;
+      }
+      return left.action.name.localeCompare(right.action.name);
+    });
+
+  return groupScopedResults(matches.map((entry) => entry.action));
+}
+
+function getVisibleRootActions(
+  actions: Record<string, ActionImpl>,
+  rootActionId: string | null,
+): ActionImpl[] {
+  return Object.keys(actions)
+    .reduce<ActionImpl[]>((acc, actionId) => {
+      const action = actions[actionId];
+      if (!action.parent && !rootActionId) {
+        acc.push(action);
+      }
+      if (action.id === rootActionId) {
+        acc.push(...action.children);
+      }
+      return acc;
+    }, [])
+    .sort((left, right) => right.priority - left.priority);
+}
+
+function collectSearchableActions(rootActions: ActionImpl[]): ActionImpl[] {
+  const collected = [...rootActions];
+
+  for (const action of rootActions) {
+    if (action.children.length > 0) {
+      collected.push(...collectSearchableActions(action.children));
+    }
+  }
+
+  return collected;
+}
+
+function matchesSearchMode(action: ActionImpl, mode: SearchMode): boolean {
+  if (mode === 'all') return true;
+
+  const sectionName = getActionSectionName(action);
+
+  switch (mode) {
+    case 'categories':
+      return sectionName === SECTIONS.categories.name;
+    case 'tags':
+      return sectionName === SECTIONS.tags.name;
+    case 'commands':
+      return (
+        sectionName === SECTIONS.pages.name ||
+        sectionName === SECTIONS.page.name ||
+        sectionName === SECTIONS.preferences.name ||
+        action.id === 'open-random-post'
+      );
+    default:
+      return true;
+  }
+}
+
+function scoreAction(action: ActionImpl, term: string): number | null {
+  const normalized = term.trim().toLowerCase();
+  if (!normalized) {
+    return 1;
+  }
+
+  const parts = normalized.split(/\s+/).filter(Boolean);
+  const name = action.name.toLowerCase();
+  const subtitle = action.subtitle?.toLowerCase() ?? '';
+  const keywords = action.keywords?.toLowerCase() ?? '';
+  const breadcrumb = action.ancestors
+    .map((ancestor) => ancestor.name.toLowerCase())
+    .join(' / ');
+
+  let totalScore = 0;
+
+  for (const part of parts) {
+    const termScore =
+      getFieldScore(name, part, 120, 90) ??
+      getFieldScore(subtitle, part, 80, 60) ??
+      getFieldScore(keywords, part, 55, 40) ??
+      getFieldScore(breadcrumb, part, 40, 24);
+
+    if (termScore === null) {
+      return null;
+    }
+
+    totalScore += termScore;
+  }
+
+  return totalScore;
+}
+
+function getFieldScore(
+  value: string,
+  term: string,
+  startsWithScore: number,
+  includesScore: number,
+): number | null {
+  if (!value) return null;
+  if (value === term) return startsWithScore + 20;
+  if (value.startsWith(term)) return startsWithScore;
+  if (value.includes(term)) return includesScore;
+  return null;
+}
+
+function getActionSectionName(action: ActionImpl): string {
+  return typeof action.section === 'string'
+    ? action.section
+    : action.section?.name ?? '';
+}
+
+function groupScopedResults(actions: ActionImpl[]): Array<string | ActionImpl> {
+  const groups = new Map<string, ActionImpl[]>();
+  const sectionMeta = new Map<string, number>();
+  const ordered: Array<string | ActionImpl> = [];
+
+  for (const action of actions) {
+    const sectionName = getActionSectionName(action);
+    if (!sectionName) {
+      ordered.push(action);
+      continue;
+    }
+
+    if (!groups.has(sectionName)) {
+      groups.set(sectionName, []);
+      sectionMeta.set(
+        sectionName,
+        typeof action.section === 'string' ? 0 : action.section?.priority ?? 0,
+      );
+    }
+
+    groups.get(sectionName)!.push(action);
+  }
+
+  const groupedSections = [...groups.keys()].sort(
+    (left, right) => (sectionMeta.get(right) ?? 0) - (sectionMeta.get(left) ?? 0),
+  );
+
+  for (const sectionName of groupedSections) {
+    ordered.push(sectionName);
+    ordered.push(...(groups.get(sectionName) ?? []));
+  }
+
+  return ordered;
+}
+
+function getEmptyStateMessage(parsedSearch: ParsedSearchQuery): string {
+  switch (parsedSearch.mode) {
+    case 'categories':
+      return 'no category matches. try @windows or @服务.';
+    case 'tags':
+      return 'no tag matches. try #minio or #choco仓库.';
+    case 'commands':
+      return 'no command matches. try >theme or >top.';
+    default:
+      return 'no matches. try a post title, tag, page, or action keyword.';
+  }
 }
 
 function scrollToHeading(id: string) {
