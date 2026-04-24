@@ -78,6 +78,7 @@ draft: false
 - **Bundled post asset sync** → `scripts/sync-post-assets.mjs`
 - **WenKai subset rebuild** → `npm run font:subset`
   Requires `pyftsubset` from `fonttools` (for example inside `.venv`) and will auto-download the upstream `LXGWWenKaiScreen.ttf` source font into `.cache/fonts/` when missing.
+  `npm run build` also runs this automatically, but skips the rebuild when the detected character set has not changed.
 
 ## Deploying
 

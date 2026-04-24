@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef, type ReactNode } from 'react';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Action, ActionImpl } from 'kbar';
 import {
@@ -299,6 +299,7 @@ function CommandMenuPalette() {
   const searchStyle = containsCjk(searchQuery)
     ? { fontFamily: 'var(--font-prose)' as const }
     : undefined;
+  usePrefetchVisibleRoutes(visibleResults);
 
   return (
     <KBarPortal>
@@ -340,6 +341,29 @@ function CommandMenuPalette() {
       </KBarPositioner>
     </KBarPortal>
   );
+}
+
+function usePrefetchVisibleRoutes(results: Array<string | ActionImpl>) {
+  const router = useRouter();
+  const prefetched = useRef<Set<string>>(new Set());
+
+  const hrefs = useMemo(
+    () =>
+      results
+        .filter((item): item is ActionImpl => typeof item !== 'string')
+        .map(getActionHref)
+        .filter((href): href is string => Boolean(href))
+        .slice(0, 6),
+    [results],
+  );
+
+  useEffect(() => {
+    for (const href of hrefs) {
+      if (prefetched.current.has(href)) continue;
+      prefetched.current.add(href);
+      router.prefetch(href);
+    }
+  }, [hrefs, router]);
 }
 
 const ResultItem = forwardRef<HTMLDivElement, { action: ActionImpl; active: boolean }>(
@@ -566,6 +590,31 @@ function getActionSectionName(action: ActionImpl): string {
   return typeof action.section === 'string'
     ? action.section
     : action.section?.name ?? '';
+}
+
+function getActionHref(action: ActionImpl): string | null {
+  const sectionName = getActionSectionName(action);
+
+  if (sectionName === SECTIONS.pages.name && action.subtitle?.startsWith('/')) {
+    return action.subtitle;
+  }
+
+  if (sectionName === SECTIONS.posts.name && action.id.startsWith('post-')) {
+    return `/posts/${encodeURIComponent(action.id.slice('post-'.length))}`;
+  }
+
+  if (sectionName === SECTIONS.tags.name && action.id.startsWith('tag-')) {
+    return `/tags/${encodeURIComponent(action.id.slice('tag-'.length))}`;
+  }
+
+  if (
+    sectionName === SECTIONS.categories.name &&
+    action.id.startsWith('category-')
+  ) {
+    return getCategoryHref(action.id.slice('category-'.length));
+  }
+
+  return null;
 }
 
 function groupScopedResults(actions: ActionImpl[]): Array<string | ActionImpl> {

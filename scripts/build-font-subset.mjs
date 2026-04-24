@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
@@ -14,8 +15,26 @@ const OUTPUT_FONT_PATH = path.join(
   'fonts',
   'lxgw-wenkai-subset.woff2',
 );
+const OUTPUT_META_PATH = path.join(
+  ROOT,
+  'src',
+  'app',
+  'fonts',
+  'lxgw-wenkai-subset.meta.json',
+);
 const DEFAULT_SOURCE_URL =
   'https://github.com/lxgw/LxgwWenKai-Screen/releases/download/v1.521/LXGWWenKaiScreen.ttf';
+const FONT_SOURCE_VERSION = 'v1.521';
+const SUBSET_OPTIONS = [
+  '--flavor=woff2',
+  '--layout-features=*',
+  '--glyph-names',
+  '--symbol-cmap',
+  '--legacy-cmap',
+  '--notdef-glyph',
+  '--notdef-outline',
+  '--recommended-glyphs',
+];
 const TEXT_SOURCES = [
   path.join(ROOT, 'content', 'posts'),
   path.join(ROOT, 'src'),
@@ -41,13 +60,26 @@ async function main() {
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   fs.mkdirSync(path.dirname(OUTPUT_FONT_PATH), { recursive: true });
 
+  const chars = collectSiteCharacters();
+  fs.writeFileSync(CHARSET_PATH, chars, 'utf8');
+  const subsetHash = createSubsetHash(chars);
+  const currentMeta = readSubsetMeta();
+
+  if (
+    currentMeta?.hash === subsetHash &&
+    fs.existsSync(OUTPUT_FONT_PATH)
+  ) {
+    const stats = fs.statSync(OUTPUT_FONT_PATH);
+    console.log(
+      `font:subset skipped ${path.relative(ROOT, OUTPUT_FONT_PATH)} (${Math.round(stats.size / 1024)} KB, unchanged)`,
+    );
+    return;
+  }
+
   const sourceFontPath = process.env.LXGW_WENKAI_SOURCE_FONT || SOURCE_FONT_PATH;
   if (!fs.existsSync(sourceFontPath)) {
     await downloadSourceFont(sourceFontPath, process.env.LXGW_WENKAI_SOURCE_URL || DEFAULT_SOURCE_URL);
   }
-
-  const chars = collectSiteCharacters();
-  fs.writeFileSync(CHARSET_PATH, chars, 'utf8');
 
   const pyftsubset = resolvePyftsubsetBinary();
   const result = spawnSync(
@@ -56,14 +88,7 @@ async function main() {
       sourceFontPath,
       `--text-file=${CHARSET_PATH}`,
       `--output-file=${OUTPUT_FONT_PATH}`,
-      '--flavor=woff2',
-      '--layout-features=*',
-      '--glyph-names',
-      '--symbol-cmap',
-      '--legacy-cmap',
-      '--notdef-glyph',
-      '--notdef-outline',
-      '--recommended-glyphs',
+      ...SUBSET_OPTIONS,
     ],
     {
       cwd: ROOT,
@@ -77,6 +102,20 @@ async function main() {
   }
 
   const stats = fs.statSync(OUTPUT_FONT_PATH);
+  fs.writeFileSync(
+    OUTPUT_META_PATH,
+    `${JSON.stringify(
+      {
+        hash: subsetHash,
+        fontSourceVersion: FONT_SOURCE_VERSION,
+        generatedAt: new Date().toISOString(),
+        charCount: chars.length,
+      },
+      null,
+      2,
+    )}\n`,
+    'utf8',
+  );
   console.log(
     `font:subset wrote ${path.relative(ROOT, OUTPUT_FONT_PATH)} (${Math.round(stats.size / 1024)} KB)`,
   );
@@ -122,6 +161,29 @@ function shouldKeepChar(char) {
     char === '\t' ||
     (code >= 0x20 && code !== 0x7f)
   );
+}
+
+function createSubsetHash(chars) {
+  return crypto
+    .createHash('sha256')
+    .update(
+      JSON.stringify({
+        chars,
+        fontSourceVersion: FONT_SOURCE_VERSION,
+        options: SUBSET_OPTIONS,
+      }),
+    )
+    .digest('hex');
+}
+
+function readSubsetMeta() {
+  if (!fs.existsSync(OUTPUT_META_PATH)) return null;
+
+  try {
+    return JSON.parse(fs.readFileSync(OUTPUT_META_PATH, 'utf8'));
+  } catch {
+    return null;
+  }
 }
 
 function resolvePyftsubsetBinary() {
