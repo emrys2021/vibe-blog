@@ -87,6 +87,8 @@ draft: false
 
 The output is fully static — any static host works (Vercel, Netlify, Cloudflare Pages, GitHub Pages, plain S3). On Vercel: connect the repo and you're done. Elsewhere, `next build` then serve `.next/` with `next start`, or add `output: 'export'` to `next.config.mjs` for `out/`.
 
+For a self-hosted VPS workflow with Nginx, systemd, HTTPS, and GitHub Actions auto-deploy, see [docs/self-hosting-vps-deploy.md](docs/self-hosting-vps-deploy.md).
+
 ## License
 
 MIT.
