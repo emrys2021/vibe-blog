@@ -48,8 +48,11 @@ export default async function PostPage({ params }: Props) {
       <div className="md:grid md:grid-cols-[10rem_1fr] md:gap-6 lg:grid-cols-[12rem_1fr] lg:gap-10 xl:grid-cols-[14rem_1fr] xl:gap-12">
         {/* left sidebar TOC: sticky from md (≥768px) up */}
         <aside className="hidden md:block">
-          <div className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2">
-            <Toc items={post.toc} />
+          <div
+            className="sticky top-20 max-h-[calc(100vh-6rem)] overflow-y-auto pr-2"
+            data-toc-scroll-container
+          >
+            <Toc items={post.toc} autoScrollActive />
           </div>
         </aside>
 

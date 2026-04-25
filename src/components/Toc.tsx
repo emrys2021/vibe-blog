@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TocItem } from '@/lib/types';
 
 /**
@@ -8,8 +8,16 @@ import type { TocItem } from '@/lib/types';
  * whose top has crossed an activation line ~120px below the viewport top,
  * which clears the sticky header and gives a little breathing room.
  */
-export function Toc({ items }: { items: TocItem[] }) {
+export function Toc({
+  items,
+  autoScrollActive = false,
+}: {
+  items: TocItem[];
+  autoScrollActive?: boolean;
+}) {
   const [activeId, setActiveId] = useState<string>('');
+  const navRef = useRef<HTMLElement | null>(null);
+  const itemRefs = useRef(new Map<string, HTMLAnchorElement>());
   const visibleDepths = [...new Set(items.map((item) => item.depth))].sort(
     (left, right) => left - right,
   );
@@ -48,10 +56,44 @@ export function Toc({ items }: { items: TocItem[] }) {
     };
   }, [items]);
 
+  useEffect(() => {
+    if (!autoScrollActive || !activeId) return;
+
+    const activeLink = itemRefs.current.get(activeId);
+    const scrollContainer = navRef.current?.closest<HTMLElement>(
+      '[data-toc-scroll-container]',
+    );
+    if (!activeLink || !scrollContainer) return;
+
+    const containerRect = scrollContainer.getBoundingClientRect();
+    const activeRect = activeLink.getBoundingClientRect();
+    const padding = 32;
+
+    if (activeRect.top < containerRect.top + padding) {
+      scrollContainer.scrollTo({
+        top:
+          scrollContainer.scrollTop +
+          activeRect.top -
+          containerRect.top -
+          padding,
+        behavior: 'auto',
+      });
+    } else if (activeRect.bottom > containerRect.bottom - padding) {
+      scrollContainer.scrollTo({
+        top:
+          scrollContainer.scrollTop +
+          activeRect.bottom -
+          containerRect.bottom +
+          padding,
+        behavior: 'auto',
+      });
+    }
+  }, [activeId, autoScrollActive]);
+
   if (items.length === 0) return null;
 
   return (
-    <nav aria-label="table of contents" className="text-xs">
+    <nav ref={navRef} aria-label="table of contents" className="text-xs">
       <div className="text-fg-dim mb-3 uppercase tracking-wide"># toc</div>
       <ul className="space-y-1.5 border-l border-rule">
         {items.map((item) => {
@@ -69,6 +111,13 @@ export function Toc({ items }: { items: TocItem[] }) {
               }
             >
               <a
+                ref={(node) => {
+                  if (node) {
+                    itemRefs.current.set(item.id, node);
+                  } else {
+                    itemRefs.current.delete(item.id);
+                  }
+                }}
                 href={`#${item.id}`}
                 style={{ fontFamily: 'var(--font-prose)' }}
                 className={`block py-0.5 leading-snug transition-colors ${
