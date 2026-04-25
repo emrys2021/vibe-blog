@@ -336,40 +336,46 @@ function CommandMenuPalette() {
   return (
     <KBarPortal>
       <KBarPositioner className="fixed inset-0 z-[90] bg-black/55 px-4 backdrop-blur-sm">
-        <KBarAnimator className="w-full max-w-3xl overflow-hidden rounded-2xl border border-rule bg-bg-elev/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
-          <div className="border-b border-rule px-4 pb-3 pt-4">
-            <div className="text-[10px] uppercase tracking-[0.28em] text-fg-dim">
-              command palette
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command palette"
+        >
+          <KBarAnimator className="w-full max-w-3xl overflow-hidden rounded-2xl border border-rule bg-bg-elev/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+            <div className="border-b border-rule px-4 pb-3 pt-4">
+              <div className="text-[10px] uppercase tracking-[0.28em] text-fg-dim">
+                command palette
+              </div>
+              <KBarSearch
+                className="mt-3 w-full bg-transparent text-base text-fg outline-none placeholder:text-fg-dim"
+                defaultPlaceholder="Search posts, pages, tags, categories, or actions..."
+                style={searchStyle}
+              />
             </div>
-            <KBarSearch
-              className="mt-3 w-full bg-transparent text-base text-fg outline-none placeholder:text-fg-dim"
-              defaultPlaceholder="Search posts, pages, tags, categories, or actions..."
-              style={searchStyle}
-            />
-          </div>
 
-          {visibleResults.length === 0 ? (
-            <div className="px-4 py-6 text-sm text-fg-dim">
-              {getEmptyStateMessage(parsedSearch)}
-            </div>
-          ) : (
-            <div className="pb-2">
-              <KBarResults
-                items={visibleResults}
-                maxHeight={560}
-                onRender={({ item, active }) =>
-                  typeof item === 'string' ? (
-                    <div className="px-4 pb-2 pt-4 text-[10px] uppercase tracking-[0.24em] text-fg-dim first:pt-3">
-                      {item}
-                    </div>
-                  ) : (
-                  <ResultItem action={item} active={active} />
-                )
-              }
-            />
-            </div>
-          )}
-      </KBarAnimator>
+            {visibleResults.length === 0 ? (
+              <div className="px-4 py-6 text-sm text-fg-dim">
+                {getEmptyStateMessage(parsedSearch)}
+              </div>
+            ) : (
+              <div className="pb-2">
+                <KBarResults
+                  items={visibleResults}
+                  maxHeight={560}
+                  onRender={({ item, active }) =>
+                    typeof item === 'string' ? (
+                      <div className="px-4 pb-2 pt-4 text-[10px] uppercase tracking-[0.24em] text-fg-dim first:pt-3">
+                        {item}
+                      </div>
+                    ) : (
+                    <ResultItem action={item} active={active} />
+                  )
+                }
+              />
+              </div>
+            )}
+          </KBarAnimator>
+        </div>
       </KBarPositioner>
     </KBarPortal>
   );

@@ -168,7 +168,12 @@ export function CommandMenuRoot() {
       })() : null}
 
       {showLoadingFallback ? (
-        <div className="fixed inset-0 z-[88] bg-black/45 px-4 backdrop-blur-sm">
+        <div
+          className="fixed inset-0 z-[88] bg-black/45 px-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command palette loading"
+        >
           <div className="mx-auto mt-[10vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-rule bg-bg-elev/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="border-b border-rule px-4 pb-3 pt-4">
               <div className="text-[10px] uppercase tracking-[0.28em] text-fg-dim">

@@ -3,6 +3,7 @@ import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import './globals.css';
 import { jetbrainsMono, wenkai } from './fonts';
+import { BackspaceNavigation } from '@/components/BackspaceNavigation';
 import { CommandMenuRoot } from '@/components/CommandMenuRoot';
 import { Header } from '@/components/Header';
 import { Footer } from '@/components/Footer';
@@ -49,6 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Header />
         <main className="flex-1 w-full">{children}</main>
         <Footer />
+        <BackspaceNavigation />
         <CommandMenuRoot />
         <Analytics />
         <SpeedInsights />
