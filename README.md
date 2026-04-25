@@ -73,12 +73,13 @@ draft: false
 ## Customizing
 
 - **Branding & nav** → `blog.config.ts`
+  Set `url` to your real production domain so RSS, sitemap, and metadata links are correct.
 - **Colors / fonts** → CSS custom properties in `src/app/globals.css` (`@theme` block)
 - **Markdown pipeline** → `src/lib/markdown.ts` (add remark/rehype plugins here)
 - **Bundled post asset sync** → `scripts/sync-post-assets.mjs`
 - **Command palette search index** → `npm run command-menu:index`
-- **WenKai subset rebuild** → `npm run font:subset`
-  Requires `pyftsubset` from `fonttools` (for example inside `.venv`) and will auto-download the upstream `LXGWWenKaiScreen.ttf` source font into `.cache/fonts/` when missing.
+- **Font subset rebuild** → `npm run font:subset`
+  Requires `pyftsubset` from `fonttools` (for example inside `.venv`) and will auto-download the upstream `LXGWWenKaiScreen.ttf` and JetBrains Mono variable source fonts into `.cache/fonts/` when missing.
   `npm run build` also runs this automatically, but skips the rebuild when the detected character set has not changed.
 
 ## Deploying

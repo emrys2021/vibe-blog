@@ -21,6 +21,7 @@ export const metadata: Metadata = {
     title: siteConfig.title,
     description: siteConfig.description,
     type: 'website',
+    locale: siteConfig.language,
   },
 };
 
@@ -38,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html
-      lang="en"
+      lang={siteConfig.language}
       data-theme="dark"
       suppressHydrationWarning
       className={`${jetbrainsMono.variable} ${wenkai.variable}`}
