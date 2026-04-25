@@ -11,6 +11,7 @@ import rehypeStringify from 'rehype-stringify';
 import GithubSlugger from 'github-slugger';
 import type { TocItem } from './types';
 import { remarkCallout } from './remark-callout';
+import { siteConfig } from '../../blog.config';
 
 const prettyCodeOptions = {
   theme: {
@@ -25,6 +26,7 @@ const OBSIDIAN_EMBED_RE = /!\[\[([^\]]+)\]\]/g;
 const IMAGE_EXT_RE = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i;
 const ABSOLUTE_URL_RE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 const MARKDOWN_SOURCE_RE = /\.(md|mdx|markdown)$/i;
+const SITE_ORIGIN = new URL(siteConfig.url).origin;
 
 interface RenderMarkdownOptions {
   slug?: string;
@@ -43,6 +45,7 @@ function createProcessor(options: RenderMarkdownOptions = {}) {
     .use(remarkCallout)
     .use(remarkRewriteRelativeAssetUrls, options)
     .use(remarkRehype, { allowDangerousHtml: true })
+    .use(rehypeExternalArticleLinks)
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, {
       behavior: 'wrap',
@@ -96,10 +99,36 @@ function remarkRewriteRelativeAssetUrls(options: RenderMarkdownOptions = {}) {
   };
 }
 
+function rehypeExternalArticleLinks() {
+  return (tree: HastNode) => {
+    visitHastTree(tree, (node) => {
+      if (node.type !== 'element' || node.tagName !== 'a') return;
+
+      const href = typeof node.properties?.href === 'string'
+        ? node.properties.href
+        : null;
+      if (!href || !shouldOpenInNewTab(href)) return;
+
+      node.properties = {
+        ...node.properties,
+        target: '_blank',
+        rel: 'noopener noreferrer',
+      };
+    });
+  };
+}
+
 interface MarkdownNode {
   type?: string;
   url?: string;
   children?: MarkdownNode[];
+}
+
+interface HastNode {
+  type?: string;
+  tagName?: string;
+  properties?: Record<string, unknown>;
+  children?: HastNode[];
 }
 
 function visitMarkdownTree(node: MarkdownNode, visitor: (node: MarkdownNode) => void) {
@@ -107,6 +136,14 @@ function visitMarkdownTree(node: MarkdownNode, visitor: (node: MarkdownNode) => 
   if (!Array.isArray(node.children)) return;
   for (const child of node.children) {
     visitMarkdownTree(child, visitor);
+  }
+}
+
+function visitHastTree(node: HastNode, visitor: (node: HastNode) => void) {
+  visitor(node);
+  if (!Array.isArray(node.children)) return;
+  for (const child of node.children) {
+    visitHastTree(child, visitor);
   }
 }
 
@@ -241,6 +278,21 @@ function isAbsoluteOrDocumentUrl(url: string): boolean {
     url.startsWith('#') ||
     url.startsWith('?')
   );
+}
+
+function shouldOpenInNewTab(url: string): boolean {
+  if (!ABSOLUTE_URL_RE.test(url)) return false;
+
+  try {
+    const resolved = new URL(url, siteConfig.url);
+    if (!/^https?:$/.test(resolved.protocol)) {
+      return false;
+    }
+
+    return resolved.origin !== SITE_ORIGIN;
+  } catch {
+    return false;
+  }
 }
 
 function isImagePath(specifier: string): boolean {
