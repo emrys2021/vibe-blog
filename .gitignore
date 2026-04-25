@@ -11,6 +11,7 @@ build/
 dist/
 public/post-assets/
 public/command-menu-index.json
+public/command-menu-fulltext-index.json
 .cache/
 
 # misc

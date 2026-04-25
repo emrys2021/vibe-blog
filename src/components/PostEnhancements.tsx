@@ -7,6 +7,8 @@ const HEADER_SELECTOR = 'header[data-site-header]';
 const HEADING_SELECTOR = 'h1[id], h2[id], h3[id], h4[id], h5[id], h6[id]';
 const CODE_FIGURE_SELECTOR = 'figure[data-rehype-pretty-code-figure]';
 const IMAGE_SELECTOR = '.prose img';
+const COLLAPSIBLE_CODE_LINE_THRESHOLD = 32;
+const COLLAPSED_CODE_VISIBLE_LINES = 22;
 
 interface LightboxImage {
   src: string;
@@ -206,17 +208,29 @@ function enhanceCodeFigure(figure: HTMLElement) {
   const language = formatLanguageLabel(
     pre.dataset.language || code.dataset.language || 'code',
   );
+  const rawCode = normalizeCodeText(code.textContent ?? '');
+  const collapseCleanup = enhanceCollapsibleCodeFigure(
+    figure,
+    getCodeLineCount(rawCode),
+  );
 
   const actionButton = createCodeActionButton(language);
   actionButton.setAttribute('aria-label', `Copy ${language} code block`);
 
   const handleClick = async () => {
-    const raw = normalizeCodeText(code.textContent ?? '');
-    const copied = raw ? await copyText(raw) : false;
+    const copied = rawCode ? await copyText(rawCode) : false;
     flashActionLabel(actionButton, copied ? 'copied' : 'error');
   };
+  const handlePointerEnter = () => setCodeActionLabel(actionButton, 'hover');
+  const handlePointerLeave = () => setCodeActionLabel(actionButton, 'default');
+  const handleFocus = () => setCodeActionLabel(actionButton, 'hover');
+  const handleBlur = () => setCodeActionLabel(actionButton, 'default');
 
   actionButton.addEventListener('click', handleClick);
+  actionButton.addEventListener('pointerenter', handlePointerEnter);
+  actionButton.addEventListener('pointerleave', handlePointerLeave);
+  actionButton.addEventListener('focus', handleFocus);
+  actionButton.addEventListener('blur', handleBlur);
 
   if (title) {
     title.classList.add('code-title-enhanced');
@@ -228,9 +242,50 @@ function enhanceCodeFigure(figure: HTMLElement) {
 
   return () => {
     actionButton.removeEventListener('click', handleClick);
+    actionButton.removeEventListener('pointerenter', handlePointerEnter);
+    actionButton.removeEventListener('pointerleave', handlePointerLeave);
+    actionButton.removeEventListener('focus', handleFocus);
+    actionButton.removeEventListener('blur', handleBlur);
     actionButton.remove();
     title?.classList.remove('code-title-enhanced');
     figure.classList.remove('code-block-with-action');
+    collapseCleanup?.();
+  };
+}
+
+function enhanceCollapsibleCodeFigure(figure: HTMLElement, lineCount: number) {
+  if (lineCount <= COLLAPSIBLE_CODE_LINE_THRESHOLD) return null;
+  if (figure.querySelector('.code-collapse-toggle')) return null;
+
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'code-collapse-toggle';
+  figure.classList.add('code-block-collapsible', 'code-block-collapsed');
+  figure.style.setProperty(
+    '--code-collapsed-lines',
+    String(COLLAPSED_CODE_VISIBLE_LINES),
+  );
+
+  const update = () => {
+    const collapsed = figure.classList.contains('code-block-collapsed');
+    button.textContent = collapsed ? `expand ${lineCount} lines` : 'collapse';
+    button.setAttribute('aria-expanded', String(!collapsed));
+  };
+
+  const handleClick = () => {
+    figure.classList.toggle('code-block-collapsed');
+    update();
+  };
+
+  button.addEventListener('click', handleClick);
+  update();
+  figure.appendChild(button);
+
+  return () => {
+    button.removeEventListener('click', handleClick);
+    button.remove();
+    figure.classList.remove('code-block-collapsible', 'code-block-collapsed');
+    figure.style.removeProperty('--code-collapsed-lines');
   };
 }
 
@@ -295,6 +350,11 @@ function normalizeCodeText(value: string): string {
   return value.replace(/\n$/, '');
 }
 
+function getCodeLineCount(value: string): number {
+  if (!value) return 0;
+  return value.split('\n').length;
+}
+
 function formatLanguageLabel(value: string): string {
   const lower = value.toLowerCase();
 
@@ -343,16 +403,16 @@ function createCodeActionButton(language: string): HTMLButtonElement {
   button.type = 'button';
   button.className = 'code-copy-action';
   button.dataset.feedback = '';
+  button.dataset.defaultLabel = language;
+  button.dataset.hoverLabel = 'copy';
+  button.dataset.copiedLabel = 'copied';
+  button.dataset.errorLabel = 'error';
 
-  const defaultLabel = document.createElement('span');
-  defaultLabel.className = 'code-action-default';
-  defaultLabel.textContent = language;
+  const label = document.createElement('span');
+  label.className = 'code-action-label';
+  label.textContent = language;
 
-  const hoverLabel = document.createElement('span');
-  hoverLabel.className = 'code-action-hover';
-  hoverLabel.textContent = 'copy';
-
-  button.append(defaultLabel, hoverLabel);
+  button.append(label);
   return button;
 }
 
@@ -381,19 +441,50 @@ function flashActionLabel(element: HTMLButtonElement, activeLabel: string) {
   const host = element as HTMLButtonElement & {
     [timerKey]?: number;
   };
-  const hoverLabel = element.querySelector<HTMLElement>('.code-action-hover');
-  if (!hoverLabel) return;
 
   if (host[timerKey]) {
     window.clearTimeout(host[timerKey]);
   }
 
   element.dataset.feedback = activeLabel;
-  hoverLabel.textContent = activeLabel;
+  setButtonLabel(element, getCodeActionLabelByState(element, activeLabel));
   host[timerKey] = window.setTimeout(() => {
     element.dataset.feedback = '';
-    hoverLabel.textContent = 'copy';
+    setCodeActionLabel(
+      element,
+      element.matches(':hover, :focus, :focus-visible') ? 'hover' : 'default',
+    );
   }, 1400);
+}
+
+function setCodeActionLabel(
+  element: HTMLButtonElement,
+  state: 'default' | 'hover',
+) {
+  if (element.dataset.feedback) return;
+  setButtonLabel(element, getCodeActionLabelByState(element, state));
+}
+
+function getCodeActionLabelByState(
+  element: HTMLButtonElement,
+  state: string,
+): string {
+  switch (state) {
+    case 'hover':
+      return element.dataset.hoverLabel || 'copy';
+    case 'copied':
+      return element.dataset.copiedLabel || 'copied';
+    case 'error':
+      return element.dataset.errorLabel || 'error';
+    default:
+      return element.dataset.defaultLabel || 'code';
+  }
+}
+
+function setButtonLabel(element: HTMLButtonElement, label: string) {
+  const text = element.querySelector<HTMLElement>('.code-action-label');
+  if (!text) return;
+  text.textContent = label;
 }
 
 function clamp(value: number, min: number, max: number) {

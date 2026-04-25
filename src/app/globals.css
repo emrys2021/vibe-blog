@@ -223,9 +223,18 @@ body {
 .prose blockquote {
   border-left: 3px solid var(--color-accent);
   background: var(--color-bg-elev);
-  padding: 0.6em 1em;
+  padding: 0.45em 0.95em;
   color: var(--color-fg-dim);
   font-style: normal;
+}
+.prose blockquote > :first-child {
+  margin-top: 0;
+}
+.prose blockquote > :last-child {
+  margin-bottom: 0;
+}
+.prose blockquote p {
+  line-height: 1.7;
 }
 .prose hr {
   border-color: var(--color-rule);
@@ -406,10 +415,10 @@ figure[data-rehype-pretty-code-figure] {
   padding: 0.18rem 0.46rem;
   background: transparent;
   cursor: pointer;
-  overflow: hidden;
   letter-spacing: 0.03em;
   z-index: 2;
   transform: none;
+  white-space: nowrap;
 }
 .code-title-enhanced .code-copy-action {
   position: static;
@@ -421,71 +430,120 @@ figure[data-rehype-pretty-code-figure] {
 .code-block-with-action > .code-copy-action {
   border-color: transparent;
   box-shadow: none;
+  right: 0.38rem;
+}
+.code-block-with-action::before {
+  content: '';
+  position: absolute;
+  top: 0.34rem;
+  right: 0.3rem;
+  width: 5.9rem;
+  height: 1.7rem;
+  border-radius: 8px;
+  background: linear-gradient(
+    to left,
+    var(--color-bg-elev) 54%,
+    color-mix(in srgb, var(--color-bg-elev) 92%, transparent) 76%,
+    transparent
+  );
+  pointer-events: none;
+  z-index: 1;
 }
 .code-block-with-action > pre {
   padding-right: 4.3rem;
 }
-.code-action-default,
-.code-action-hover {
+.code-block-collapsible > pre {
+  margin-bottom: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+.code-block-collapsible.code-block-collapsed > pre {
+  max-height: calc((1.65em * var(--code-collapsed-lines, 22)) + 2em);
+  overflow-y: hidden;
+}
+.code-block-collapsible.code-block-collapsed::after {
+  content: '';
+  position: absolute;
+  right: 1px;
+  bottom: 2.05rem;
+  left: 1px;
+  height: 3.5rem;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    color-mix(in srgb, var(--color-bg-elev) 96%, transparent) 70%,
+    var(--color-bg-elev)
+  );
+  pointer-events: none;
+  z-index: 1;
+}
+.code-collapse-toggle {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--color-rule);
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  background: color-mix(in srgb, var(--color-bg-elev) 92%, var(--color-bg));
+  color: var(--color-fg-dim);
+  padding: 0.48rem 0.75rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    color 140ms ease,
+    background-color 140ms ease;
+}
+.code-collapse-toggle:hover,
+.code-collapse-toggle:focus-visible {
+  color: var(--color-accent);
+  background: var(--color-bg-elev);
+  outline: none;
+}
+.code-action-label {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 100%;
   font-size: 0.62rem;
   white-space: nowrap;
   transition:
-    opacity 140ms ease,
-    transform 140ms ease;
-}
-.code-action-default {
+    color 140ms ease,
+    opacity 140ms ease;
   opacity: 0.82;
-}
-.code-action-hover {
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transform: translateY(3px);
 }
 .code-copy-action:hover,
 .code-copy-action:focus-visible,
 figure[data-rehype-pretty-code-figure]:hover .code-copy-action,
 .code-copy-action[data-feedback='copied'],
 .code-copy-action[data-feedback='error'] {
-  border-color: var(--color-rule);
+  border-color: transparent;
   background: color-mix(in srgb, var(--color-bg-elev) 88%, transparent);
   outline: none;
-}
-.code-copy-action:hover .code-action-default,
-.code-copy-action:focus-visible .code-action-default,
-figure[data-rehype-pretty-code-figure]:hover .code-copy-action .code-action-default,
-.code-copy-action[data-feedback='copied'] .code-action-default,
-.code-copy-action[data-feedback='error'] .code-action-default {
-  opacity: 0;
-  transform: translateY(-3px);
-}
-.code-copy-action:hover .code-action-hover,
-.code-copy-action:focus-visible .code-action-hover,
-figure[data-rehype-pretty-code-figure]:hover .code-copy-action .code-action-hover,
-.code-copy-action[data-feedback='copied'] .code-action-hover,
-.code-copy-action[data-feedback='error'] .code-action-hover {
-  opacity: 1;
-  transform: translateY(0);
 }
 .code-copy-action:hover,
 .code-copy-action:focus-visible,
 figure[data-rehype-pretty-code-figure]:hover .code-copy-action {
   color: var(--color-accent);
 }
+.code-copy-action:hover .code-action-label,
+.code-copy-action:focus-visible .code-action-label,
+figure[data-rehype-pretty-code-figure]:hover .code-copy-action .code-action-label,
+.code-copy-action[data-feedback='copied'] .code-action-label,
+.code-copy-action[data-feedback='error'] .code-action-label {
+  opacity: 1;
+}
 .code-block-with-action:hover > .code-copy-action,
 .code-block-with-action > .code-copy-action:focus-visible {
   transform: none;
 }
 .code-copy-action[data-feedback='copied'] {
-  border-color: color-mix(in srgb, var(--color-accent) 55%, var(--color-rule));
+  border-color: transparent;
   color: var(--color-accent);
 }
 .code-copy-action[data-feedback='error'] {
-  border-color: color-mix(in srgb, var(--color-danger) 60%, var(--color-rule));
+  border-color: transparent;
   color: var(--color-danger);
 }
 .heading-share-button {

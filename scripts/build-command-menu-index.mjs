@@ -6,6 +6,11 @@ import matter from 'gray-matter';
 const ROOT = process.cwd();
 const CONTENT_ROOT = path.join(ROOT, 'content', 'posts');
 const OUTPUT_PATH = path.join(ROOT, 'public', 'command-menu-index.json');
+const FULLTEXT_OUTPUT_PATH = path.join(
+  ROOT,
+  'public',
+  'command-menu-fulltext-index.json',
+);
 const INCLUDE_DRAFTS = process.argv.includes('--include-drafts');
 
 function collectMarkdownFiles() {
@@ -113,14 +118,13 @@ function buildCommandMenuData() {
         description: data.description,
         category: data.category,
         tags: data.tags ?? [],
-        searchText: normalizeSearchText(
-          [
-            data.title,
-            data.description,
-            data.category,
-            ...(data.tags ?? []),
-            content,
-          ]
+        lightSearchText: normalizeSearchText(
+          [data.title, data.description, data.category, ...(data.tags ?? [])]
+            .filter(Boolean)
+            .join('\n'),
+        ),
+        fullSearchText: normalizeSearchText(
+          [data.title, data.description, data.category, ...(data.tags ?? []), content]
             .filter(Boolean)
             .join('\n'),
         ),
@@ -153,13 +157,26 @@ function buildCommandMenuData() {
   }
 
   return {
-    posts: postEntries.map(({ draft, ...post }) => post),
-    tags: [...tagsMap.entries()]
-      .map(([tag, count]) => ({ tag, count }))
-      .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
-    categories: [...categoriesMap.values()].sort((a, b) =>
-      a.category.localeCompare(b.category),
-    ),
+    light: {
+      posts: postEntries.map(
+        ({ draft, fullSearchText, lightSearchText, ...post }) => ({
+          ...post,
+          searchText: lightSearchText,
+        }),
+      ),
+      tags: [...tagsMap.entries()]
+        .map(([tag, count]) => ({ tag, count }))
+        .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag)),
+      categories: [...categoriesMap.values()].sort((a, b) =>
+        a.category.localeCompare(b.category),
+      ),
+    },
+    fullText: {
+      posts: postEntries.map(({ slug, fullSearchText }) => ({
+        slug,
+        searchText: fullSearchText,
+      })),
+    },
   };
 }
 
@@ -167,10 +184,18 @@ function main() {
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 
   const data = buildCommandMenuData();
-  fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(data)}\n`, 'utf8');
+  fs.writeFileSync(OUTPUT_PATH, `${JSON.stringify(data.light)}\n`, 'utf8');
+  fs.writeFileSync(
+    FULLTEXT_OUTPUT_PATH,
+    `${JSON.stringify(data.fullText)}\n`,
+    'utf8',
+  );
 
   console.log(
-    `command-menu:index wrote ${path.relative(ROOT, OUTPUT_PATH)} (${data.posts.length} posts)`,
+    `command-menu:index wrote ${path.relative(ROOT, OUTPUT_PATH)} (${data.light.posts.length} posts)`,
+  );
+  console.log(
+    `command-menu:index wrote ${path.relative(ROOT, FULLTEXT_OUTPUT_PATH)} (${data.fullText.posts.length} posts)`,
   );
 }
 

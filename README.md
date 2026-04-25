@@ -6,7 +6,7 @@ A geek-flavored, file-system-driven personal blog. Drop a markdown file into `co
 
 - `Ctrl/Cmd + K` command palette for post search, page jumps, theme actions, and section navigation
 - Obsidian-friendly bundled posts with `attachments/` synced to `public/post-assets/`
-- Article UX touches: reading progress bar, heading permalinks, code copy buttons, and image lightbox
+- Article UX touches: reading progress bar, heading permalinks, code copy/collapse controls, and image lightbox
 - Self-hosted local fonts: subsetted 霞鹜文楷 plus JetBrains Mono with preload
 - File-system-driven content model with categories, tags, RSS, and sitemap generation
 
@@ -78,6 +78,7 @@ draft: false
 - **Markdown pipeline** → `src/lib/markdown.ts` (add remark/rehype plugins here)
 - **Bundled post asset sync** → `scripts/sync-post-assets.mjs`
 - **Command palette search index** → `npm run command-menu:index`
+  Writes a small navigation index plus a separate full-text index that loads only when needed.
 - **Font subset rebuild** → `npm run font:subset`
   Requires `pyftsubset` from `fonttools` (for example inside `.venv`) and will auto-download the upstream `LXGWWenKaiScreen.ttf` and JetBrains Mono variable source fonts into `.cache/fonts/` when missing.
   `npm run build` also runs this automatically, but skips the rebuild when the detected character set has not changed.

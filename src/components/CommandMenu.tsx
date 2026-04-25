@@ -1,7 +1,7 @@
 'use client';
 
 import { forwardRef } from 'react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import type { Action, ActionImpl } from 'kbar';
 import {
@@ -18,9 +18,12 @@ import {
 } from 'kbar';
 import { getCategoryHref } from '@/lib/categories';
 import { applyTheme, getTheme, type Theme } from '@/lib/theme';
-import type { CommandMenuData } from '@/lib/types';
+import type { CommandMenuData, CommandMenuFullTextData } from '@/lib/types';
 import { siteConfig } from '../../blog.config';
-import { COMMAND_MENU_TOGGLE_EVENT } from './command-menu-events';
+import {
+  COMMAND_MENU_FULLTEXT_INDEX_PATH,
+  COMMAND_MENU_TOGGLE_EVENT,
+} from './command-menu-events';
 
 const SECTIONS = {
   pages: { name: 'Pages', priority: 600 },
@@ -42,6 +45,28 @@ interface PageHeading {
   text: string;
 }
 
+type FullTextLoadState = 'idle' | 'loading' | 'ready' | 'error';
+
+let commandMenuFullTextPromise: Promise<CommandMenuFullTextData> | null = null;
+
+function loadCommandMenuFullText() {
+  if (!commandMenuFullTextPromise) {
+    commandMenuFullTextPromise = fetch(COMMAND_MENU_FULLTEXT_INDEX_PATH, {
+      cache: 'force-cache',
+    }).then(async (response) => {
+      if (!response.ok) {
+        throw new Error(
+          `command menu full-text index request failed (${response.status})`,
+        );
+      }
+
+      return (await response.json()) as CommandMenuFullTextData;
+    });
+  }
+
+  return commandMenuFullTextPromise;
+}
+
 export function CommandMenuOverlay({
   data,
   initialToggleToken = 0,
@@ -49,6 +74,37 @@ export function CommandMenuOverlay({
   const router = useRouter();
   const pathname = usePathname();
   const [pageHeadings, setPageHeadings] = useState<PageHeading[]>([]);
+  const [fullTextData, setFullTextData] =
+    useState<CommandMenuFullTextData | null>(null);
+  const [fullTextLoadState, setFullTextLoadState] =
+    useState<FullTextLoadState>('idle');
+  const loadingFullTextRef = useRef(false);
+
+  const fullTextBySlug = useMemo(
+    () =>
+      new Map(
+        fullTextData?.posts.map((post) => [post.slug, post.searchText]) ?? [],
+      ),
+    [fullTextData],
+  );
+
+  const warmFullTextIndex = useCallback(async () => {
+    if (fullTextData || loadingFullTextRef.current) return;
+
+    loadingFullTextRef.current = true;
+    setFullTextLoadState('loading');
+
+    try {
+      const loaded = await loadCommandMenuFullText();
+      setFullTextData(loaded);
+      setFullTextLoadState('ready');
+    } catch (error) {
+      console.error(error);
+      setFullTextLoadState('error');
+    } finally {
+      loadingFullTextRef.current = false;
+    }
+  }, [fullTextData]);
 
   const globalActions = useMemo<Action[]>(() => {
     const pageActions = siteConfig.nav.map((item) => ({
@@ -105,7 +161,9 @@ export function CommandMenuOverlay({
       subtitle: post.description ?? `/posts/${post.slug}`,
       section: SECTIONS.posts,
       icon: 'md',
-      keywords: post.searchText,
+      keywords: fullTextBySlug.has(post.slug)
+        ? `${post.searchText} ${fullTextBySlug.get(post.slug)}`
+        : post.searchText,
       perform: () => router.push(`/posts/${encodeURIComponent(post.slug)}`),
     }));
 
@@ -158,7 +216,7 @@ export function CommandMenuOverlay({
       ...tagActions,
       ...categoryActions,
     ];
-  }, [data.categories, data.posts, data.tags, pathname, router]);
+  }, [data.categories, data.posts, data.tags, fullTextBySlug, pathname, router]);
 
   useEffect(() => {
     const collectHeadings = () => {
@@ -187,18 +245,28 @@ export function CommandMenuOverlay({
 
   return (
     <KBarProvider
-      actions={globalActions}
+      actions={[]}
       options={{
         enableHistory: true,
         disableScrollbarManagement: true,
         animations: { enterMs: 120, exitMs: 100 },
       }}
     >
+      <GlobalActionsRegistrar actions={globalActions} />
       <CommandMenuToggleBridge initialToggleToken={initialToggleToken} />
+      <FullTextSearchLoader
+        fullTextLoadState={fullTextLoadState}
+        warmFullTextIndex={warmFullTextIndex}
+      />
       <PageScopedActions pathname={pathname} headings={pageHeadings} />
-      <CommandMenuPalette />
+      <CommandMenuPalette fullTextLoadState={fullTextLoadState} />
     </KBarProvider>
   );
+}
+
+function GlobalActionsRegistrar({ actions }: { actions: Action[] }) {
+  useRegisterActions(actions, [actions]);
+  return null;
 }
 
 function CommandMenuToggleBridge({
@@ -224,6 +292,31 @@ function CommandMenuToggleBridge({
 
     query.setVisualState(VisualState.showing);
   }, [initialToggleToken, query]);
+
+  return null;
+}
+
+function FullTextSearchLoader({
+  fullTextLoadState,
+  warmFullTextIndex,
+}: {
+  fullTextLoadState: FullTextLoadState;
+  warmFullTextIndex: () => void;
+}) {
+  const { searchQuery } = useKBar((state) => ({
+    searchQuery: state.searchQuery,
+  }));
+  const parsedSearch = useMemo(
+    () => parseSearchQuery(searchQuery),
+    [searchQuery],
+  );
+
+  useEffect(() => {
+    if (fullTextLoadState !== 'idle') return;
+    if (!shouldUseFullTextIndex(parsedSearch)) return;
+
+    warmFullTextIndex();
+  }, [fullTextLoadState, parsedSearch, warmFullTextIndex]);
 
   return null;
 }
@@ -310,7 +403,11 @@ function PageScopedActions({
   return null;
 }
 
-function CommandMenuPalette() {
+function CommandMenuPalette({
+  fullTextLoadState,
+}: {
+  fullTextLoadState: FullTextLoadState;
+}) {
   const { results } = useMatches();
   const { searchQuery, actions, rootActionId } = useKBar((state) => ({
     searchQuery: state.searchQuery,
@@ -355,7 +452,7 @@ function CommandMenuPalette() {
 
             {visibleResults.length === 0 ? (
               <div className="px-4 py-6 text-sm text-fg-dim">
-                {getEmptyStateMessage(parsedSearch)}
+                {getEmptyStateMessage(parsedSearch, fullTextLoadState)}
               </div>
             ) : (
               <div className="pb-2">
@@ -499,6 +596,10 @@ function parseSearchQuery(query: string): ParsedSearchQuery {
     default:
       return { mode: 'all', term: trimmed };
   }
+}
+
+function shouldUseFullTextIndex(parsedSearch: ParsedSearchQuery): boolean {
+  return parsedSearch.mode === 'all' && parsedSearch.term.trim().length >= 2;
 }
 
 function getScopedResults(
@@ -690,7 +791,17 @@ function groupScopedResults(actions: ActionImpl[]): Array<string | ActionImpl> {
   return ordered;
 }
 
-function getEmptyStateMessage(parsedSearch: ParsedSearchQuery): string {
+function getEmptyStateMessage(
+  parsedSearch: ParsedSearchQuery,
+  fullTextLoadState: FullTextLoadState,
+): string {
+  if (
+    shouldUseFullTextIndex(parsedSearch) &&
+    fullTextLoadState === 'loading'
+  ) {
+    return 'loading full-text search...';
+  }
+
   switch (parsedSearch.mode) {
     case 'categories':
       return 'no category matches. try @windows or @服务.';

@@ -49,6 +49,11 @@ export interface CommandMenuPost {
   searchText: string;
 }
 
+export interface CommandMenuFullTextPost {
+  slug: string;
+  searchText: string;
+}
+
 export interface CommandMenuTag {
   tag: string;
   count: number;
@@ -64,4 +69,8 @@ export interface CommandMenuData {
   posts: CommandMenuPost[];
   tags: CommandMenuTag[];
   categories: CommandMenuCategory[];
+}
+
+export interface CommandMenuFullTextData {
+  posts: CommandMenuFullTextPost[];
 }

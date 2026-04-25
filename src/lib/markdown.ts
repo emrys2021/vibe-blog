@@ -27,6 +27,7 @@ const IMAGE_EXT_RE = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i;
 const ABSOLUTE_URL_RE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 const MARKDOWN_SOURCE_RE = /\.(md|mdx|markdown)$/i;
 const SITE_ORIGIN = new URL(siteConfig.url).origin;
+const imageDimensionsCache = new Map<string, ImageDimensions | null>();
 
 interface RenderMarkdownOptions {
   slug?: string;
@@ -38,6 +39,11 @@ interface SplitSpecifier {
   suffix: string;
 }
 
+interface ImageDimensions {
+  width: number;
+  height: number;
+}
+
 function createProcessor(options: RenderMarkdownOptions = {}) {
   return unified()
     .use(remarkParse)
@@ -46,6 +52,7 @@ function createProcessor(options: RenderMarkdownOptions = {}) {
     .use(remarkRewriteRelativeAssetUrls, options)
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeExternalArticleLinks)
+    .use(rehypeOptimizeArticleImages, options)
     .use(rehypeSlug)
     .use(rehypeAutolinkHeadings, {
       behavior: 'wrap',
@@ -114,6 +121,35 @@ function rehypeExternalArticleLinks() {
         target: '_blank',
         rel: 'noopener noreferrer',
       };
+    });
+  };
+}
+
+function rehypeOptimizeArticleImages(options: RenderMarkdownOptions = {}) {
+  return (tree: HastNode) => {
+    visitHastTree(tree, (node) => {
+      if (node.type !== 'element' || node.tagName !== 'img') return;
+
+      const src = typeof node.properties?.src === 'string'
+        ? node.properties.src
+        : null;
+
+      node.properties = {
+        ...node.properties,
+        loading: node.properties?.loading ?? 'lazy',
+        decoding: node.properties?.decoding ?? 'async',
+      };
+
+      if (!src || node.properties.width || node.properties.height) return;
+
+      const imagePath = resolvePublicImageFilePath(src, options);
+      if (!imagePath) return;
+
+      const dimensions = getImageDimensions(imagePath);
+      if (!dimensions) return;
+
+      node.properties.width = dimensions.width;
+      node.properties.height = dimensions.height;
     });
   };
 }
@@ -293,6 +329,183 @@ function shouldOpenInNewTab(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function resolvePublicImageFilePath(
+  src: string,
+  options: RenderMarkdownOptions,
+): string | null {
+  if (!options.slug || !options.postDir) return null;
+  if (!src.startsWith('/post-assets/')) return null;
+
+  const { pathname } = splitSpecifier(src);
+  const slugPrefix = `/post-assets/${encodePathSegment(options.slug)}/`;
+  if (!pathname.startsWith(slugPrefix)) return null;
+
+  const relativePath = pathname.slice(slugPrefix.length);
+  if (!relativePath) return null;
+
+  return toFileSystemPath(options.postDir, relativePath);
+}
+
+function getImageDimensions(filePath: string): ImageDimensions | null {
+  if (imageDimensionsCache.has(filePath)) {
+    return imageDimensionsCache.get(filePath) ?? null;
+  }
+
+  let dimensions: ImageDimensions | null = null;
+
+  try {
+    const buffer = fs.readFileSync(filePath);
+    dimensions =
+      getPngDimensions(buffer) ??
+      getGifDimensions(buffer) ??
+      getJpegDimensions(buffer) ??
+      getWebpDimensions(buffer) ??
+      getSvgDimensions(buffer);
+  } catch {
+    dimensions = null;
+  }
+
+  imageDimensionsCache.set(filePath, dimensions);
+  return dimensions;
+}
+
+function getPngDimensions(buffer: Buffer): ImageDimensions | null {
+  if (
+    buffer.length < 24 ||
+    buffer.toString('hex', 0, 8) !== '89504e470d0a1a0a' ||
+    buffer.toString('ascii', 12, 16) !== 'IHDR'
+  ) {
+    return null;
+  }
+
+  return {
+    width: buffer.readUInt32BE(16),
+    height: buffer.readUInt32BE(20),
+  };
+}
+
+function getGifDimensions(buffer: Buffer): ImageDimensions | null {
+  const header = buffer.toString('ascii', 0, 6);
+  if (buffer.length < 10 || (header !== 'GIF87a' && header !== 'GIF89a')) {
+    return null;
+  }
+
+  return {
+    width: buffer.readUInt16LE(6),
+    height: buffer.readUInt16LE(8),
+  };
+}
+
+function getJpegDimensions(buffer: Buffer): ImageDimensions | null {
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) {
+    return null;
+  }
+
+  let offset = 2;
+  while (offset + 9 < buffer.length) {
+    if (buffer[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+
+    const marker = buffer[offset + 1];
+    offset += 2;
+    if (marker === 0xd8 || marker === 0xd9) continue;
+    if (offset + 2 > buffer.length) return null;
+
+    const segmentLength = buffer.readUInt16BE(offset);
+    if (segmentLength < 2 || offset + segmentLength > buffer.length) {
+      return null;
+    }
+
+    if (isJpegStartOfFrame(marker)) {
+      return {
+        height: buffer.readUInt16BE(offset + 3),
+        width: buffer.readUInt16BE(offset + 5),
+      };
+    }
+
+    offset += segmentLength;
+  }
+
+  return null;
+}
+
+function isJpegStartOfFrame(marker: number): boolean {
+  return (
+    (marker >= 0xc0 && marker <= 0xc3) ||
+    (marker >= 0xc5 && marker <= 0xc7) ||
+    (marker >= 0xc9 && marker <= 0xcb) ||
+    (marker >= 0xcd && marker <= 0xcf)
+  );
+}
+
+function getWebpDimensions(buffer: Buffer): ImageDimensions | null {
+  if (
+    buffer.length < 30 ||
+    buffer.toString('ascii', 0, 4) !== 'RIFF' ||
+    buffer.toString('ascii', 8, 12) !== 'WEBP'
+  ) {
+    return null;
+  }
+
+  const chunk = buffer.toString('ascii', 12, 16);
+  if (chunk === 'VP8X') {
+    return {
+      width: readUInt24LE(buffer, 24) + 1,
+      height: readUInt24LE(buffer, 27) + 1,
+    };
+  }
+
+  if (chunk === 'VP8 ') {
+    return {
+      width: buffer.readUInt16LE(26) & 0x3fff,
+      height: buffer.readUInt16LE(28) & 0x3fff,
+    };
+  }
+
+  if (chunk === 'VP8L' && buffer[20] === 0x2f) {
+    const bits = buffer.readUInt32LE(21);
+    return {
+      width: (bits & 0x3fff) + 1,
+      height: ((bits >> 14) & 0x3fff) + 1,
+    };
+  }
+
+  return null;
+}
+
+function getSvgDimensions(buffer: Buffer): ImageDimensions | null {
+  const text = buffer.toString('utf8', 0, Math.min(buffer.length, 4096));
+  if (!text.includes('<svg')) return null;
+
+  const width = getSvgNumericAttribute(text, 'width');
+  const height = getSvgNumericAttribute(text, 'height');
+  if (width && height) {
+    return { width, height };
+  }
+
+  const viewBox = /\bviewBox=["']\s*[-.\d]+\s+[-.\d]+\s+([.\d]+)\s+([.\d]+)/i.exec(text);
+  if (!viewBox) return null;
+
+  return {
+    width: Math.round(Number(viewBox[1])),
+    height: Math.round(Number(viewBox[2])),
+  };
+}
+
+function getSvgNumericAttribute(text: string, name: string): number | null {
+  const match = new RegExp(`\\b${name}=["']([\\d.]+)(?:px)?["']`, 'i').exec(text);
+  if (!match) return null;
+
+  const value = Number(match[1]);
+  return Number.isFinite(value) && value > 0 ? Math.round(value) : null;
+}
+
+function readUInt24LE(buffer: Buffer, offset: number): number {
+  return buffer[offset] | (buffer[offset + 1] << 8) | (buffer[offset + 2] << 16);
 }
 
 function isImagePath(specifier: string): boolean {
