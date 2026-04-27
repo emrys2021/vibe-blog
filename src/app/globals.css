@@ -114,6 +114,7 @@ body {
 .prose h5,
 .prose h6 {
   color: var(--color-fg);
+  font-family: var(--font-prose);
   display: flex;
   align-items: baseline;
   flex-wrap: wrap;
@@ -339,6 +340,15 @@ body {
   outline: none;
 }
 
+
+/* Reading surfaces that may contain Obsidian Chinese paths, titles, and headings. */
+[data-post-article] header h1,
+[data-post-article] header p,
+[aria-label='table of contents'] a,
+[data-taxonomy-label],
+[data-prose-text] {
+  font-family: var(--font-prose);
+}
 /* ----- shiki / rehype-pretty-code (dual themes) -----
    rehype-pretty-code emits per-token CSS vars `--shiki-dark` and `--shiki-light`.
    We map them to `color` based on the active theme. */
@@ -682,3 +692,4 @@ figure[data-rehype-pretty-code-figure]:hover .code-copy-action .code-action-labe
     visibility: hidden;
   }
 }
+

@@ -1,11 +1,12 @@
 import Link from 'next/link';
 import type { PostMeta } from '@/lib/types';
 import { formatDate } from '@/lib/format';
+import { getPostHref } from '@/lib/post-urls';
 
 export function PostCard({ post }: { post: PostMeta }) {
   return (
     <article className="group py-4 border-b border-rule last:border-b-0">
-      <Link href={`/posts/${post.slug}`} className="block">
+      <Link href={getPostHref(post.slug)} className="block">
         <div className="flex items-baseline gap-3 flex-wrap">
           <time
             className="text-xs text-fg-dim tabular-nums"
@@ -13,7 +14,7 @@ export function PostCard({ post }: { post: PostMeta }) {
           >
             {formatDate(post.date)}
           </time>
-          <h2 className="text-lg font-semibold text-fg group-hover:text-accent transition-colors">
+          <h2 data-prose-text className="text-lg font-semibold text-fg group-hover:text-accent transition-colors">
             {post.title}
           </h2>
           {post.draft ? (
@@ -55,3 +56,5 @@ export function PostCard({ post }: { post: PostMeta }) {
     </article>
   );
 }
+
+

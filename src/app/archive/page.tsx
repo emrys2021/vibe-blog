@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { Metadata } from 'next';
 import { getAllPosts, groupByYear } from '@/lib/posts';
 import { formatDate } from '@/lib/format';
+import { getPostHref } from '@/lib/post-urls';
 import { Prompt } from '@/components/Prompt';
 import { Container } from '@/components/Container';
 
@@ -42,8 +43,8 @@ export default function ArchivePage() {
                     {formatDate(post.date).slice(5)}
                   </time>
                   <Link
-                    href={`/posts/${post.slug}`}
-                    style={{ fontFamily: 'var(--font-prose)' }}
+                    href={getPostHref(post.slug)}
+                    data-prose-text
                     className="text-fg hover:text-accent transition-colors truncate"
                   >
                     {post.title}
@@ -57,3 +58,5 @@ export default function ArchivePage() {
     </Container>
   );
 }
+
+

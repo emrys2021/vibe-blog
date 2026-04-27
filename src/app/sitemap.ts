@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 import { getCategoryHref } from '@/lib/categories';
 import { getAllCategories, getAllPosts, getAllTags } from '@/lib/posts';
+import { encodeSlugPath } from '@/lib/post-urls';
 import { siteConfig } from '../../blog.config';
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -14,7 +15,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   ];
 
   const posts = getAllPosts().map((p) => ({
-    url: `${base}/posts/${p.slug}`,
+    url: `${base}/posts/${encodeSlugPath(p.slug)}`,
     lastModified: new Date(p.date),
     changeFrequency: 'monthly' as const,
     priority: 0.8,
@@ -34,3 +35,4 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   return [...staticUrls, ...posts, ...tags, ...categories];
 }
+

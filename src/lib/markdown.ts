@@ -23,6 +23,7 @@ const prettyCodeOptions = {
 } as const;
 
 const OBSIDIAN_EMBED_RE = /!\[\[([^\]]+)\]\]/g;
+const OBSIDIAN_LINK_RE = /(^|[^!])\[\[([^\]]+)\]\]/g;
 const IMAGE_EXT_RE = /\.(avif|bmp|gif|ico|jpe?g|png|svg|webp)$/i;
 const ABSOLUTE_URL_RE = /^(?:[a-z][a-z\d+.-]*:|\/\/)/i;
 const MARKDOWN_SOURCE_RE = /\.(md|mdx|markdown)$/i;
@@ -32,6 +33,7 @@ const imageDimensionsCache = new Map<string, ImageDimensions | null>();
 interface RenderMarkdownOptions {
   slug?: string;
   postDir?: string;
+  resolveObsidianLink?: (target: string) => string | null;
 }
 
 interface SplitSpecifier {
@@ -339,7 +341,7 @@ function resolvePublicImageFilePath(
   if (!src.startsWith('/post-assets/')) return null;
 
   const { pathname } = splitSpecifier(src);
-  const slugPrefix = `/post-assets/${encodePathSegment(options.slug)}/`;
+  const slugPrefix = `/post-assets/${encodePath(options.slug)}/`;
   if (!pathname.startsWith(slugPrefix)) return null;
 
   const relativePath = pathname.slice(slugPrefix.length);
@@ -515,7 +517,7 @@ function isImagePath(specifier: string): boolean {
 
 function toPublicAssetUrl(slug: string, assetPath: string): string {
   const { pathname, suffix } = splitSpecifier(assetPath);
-  return `/post-assets/${encodePathSegment(slug)}/${encodePath(pathname)}${suffix}`;
+  return `/post-assets/${encodePath(slug)}/${encodePath(pathname)}${suffix}`;
 }
 
 function encodePath(pathname: string): string {
@@ -549,3 +551,5 @@ function toFileSystemPath(baseDir: string, relativePath: string): string {
 function escapeMarkdownText(value: string): string {
   return value.replace(/[[\]\\]/g, '\\$&');
 }
+
+

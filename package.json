@@ -7,7 +7,7 @@
     "sync:assets": "node scripts/sync-post-assets.mjs",
     "command-menu:index": "node scripts/build-command-menu-index.mjs",
     "font:subset": "node scripts/build-font-subset.mjs",
-    "predev": "npm run sync:assets && npm run command-menu:index -- --include-drafts",
+    "predev": "npm run sync:assets && npm run command-menu:index -- --include-drafts && npm run font:subset",
     "prebuild": "npm run sync:assets && npm run command-menu:index && npm run font:subset",
     "prestart": "npm run sync:assets && npm run command-menu:index",
     "dev": "next dev",
@@ -51,3 +51,4 @@
     "typescript": "^5.7.0"
   }
 }
+

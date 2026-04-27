@@ -19,14 +19,27 @@ import {
   normalizeCategoryPath,
 } from './categories';
 import { extractToc, renderMarkdown } from './markdown';
+import { getPostHref } from './post-urls';
 
-const CONTENT_ROOT = path.join(process.cwd(), 'content', 'posts');
+const CONTENT_ROOT = path.resolve(
+  process.env.BLOG_CONTENT_ROOT ?? path.join(process.cwd(), 'content', 'posts'),
+);
+const IGNORED_CONTENT_DIRS = new Set([
+  '.git',
+  '.obsidian',
+  '.trash',
+  'node_modules',
+  'attachments',
+]);
+const MARKDOWN_SOURCE_RE = /\.(md|mdx|markdown)$/i;
+const INDEX_SOURCE_RE = /^index\.(md|mdx|markdown)$/i;
 
 interface MarkdownSource {
   slug: string;
   absPath: string;
-  bundled: boolean;
-  postDir?: string;
+  postDir: string;
+  title: string;
+  category?: string;
 }
 
 interface RenderedPostCacheEntry {
@@ -35,50 +48,83 @@ interface RenderedPostCacheEntry {
 }
 
 /**
- * Walk content/posts and return every entry that looks like a post.
+ * Walk the content root and return every entry that looks like a post.
  *
- * Two layouts are supported (mix freely):
+ * Supported layouts (mix freely):
  *   content/posts/<slug>.md
- *   content/posts/<slug>/index.md   ← lets a post carry its own assets
+ *   content/posts/<slug>/index.md
+ *   content/posts/<category>/<post>.md
+ *
+ * Set BLOG_CONTENT_ROOT to an Obsidian vault root to publish the vault
+ * directly. Obsidian metadata folders and sibling attachments folders are
+ * ignored as posts, while sibling attachments remain available to Markdown.
  */
 function collectMarkdownFiles(): MarkdownSource[] {
   if (!fs.existsSync(CONTENT_ROOT)) return [];
-  const entries = fs.readdirSync(CONTENT_ROOT, { withFileTypes: true });
-  const results: MarkdownSource[] = [];
 
-  for (const entry of entries) {
-    const entryPath = path.join(CONTENT_ROOT, entry.name);
-    if (entry.isDirectory()) {
-      const indexPath = path.join(entryPath, 'index.md');
-      if (fs.existsSync(indexPath)) {
-        results.push({
-          slug: entry.name,
-          absPath: indexPath,
-          bundled: true,
-          postDir: entryPath,
-        });
-      }
-    } else if (entry.isFile() && entry.name.endsWith('.md')) {
-      results.push({
-        slug: entry.name.replace(/\.md$/, ''),
-        absPath: entryPath,
-        bundled: false,
-      });
-    }
-  }
-  return results;
+  const results: MarkdownSource[] = [];
+  walkContentDir(CONTENT_ROOT, results);
+  return results.sort((a, b) => a.slug.localeCompare(b.slug));
 }
 
-function parseFrontmatter(raw: string, fallbackTitle: string): { data: PostFrontmatter; content: string } {
-  const parsed = matter(raw);
-  const fm = parsed.data as Partial<PostFrontmatter>;
+function walkContentDir(dir: string, results: MarkdownSource[]) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    const entryPath = path.join(dir, entry.name);
+
+    if (entry.isDirectory()) {
+      if (!IGNORED_CONTENT_DIRS.has(entry.name)) {
+        walkContentDir(entryPath, results);
+      }
+      continue;
+    }
+
+    if (!entry.isFile() || !MARKDOWN_SOURCE_RE.test(entry.name)) {
+      continue;
+    }
+
+    const source = createMarkdownSource(entryPath);
+    if (source) results.push(source);
+  }
+}
+
+function createMarkdownSource(absPath: string): MarkdownSource | null {
+  const relativePath = toPosixPath(path.relative(CONTENT_ROOT, absPath));
+  if (!relativePath || relativePath.startsWith('..')) return null;
+
+  const parsed = path.posix.parse(relativePath);
+  const isIndex = INDEX_SOURCE_RE.test(parsed.base);
+  const slug = isIndex ? parsed.dir : path.posix.join(parsed.dir, parsed.name);
+  if (!slug) return null;
+
+  const category = isIndex ? path.posix.dirname(parsed.dir) : parsed.dir;
+  const normalizedCategory = category && category !== '.'
+    ? normalizeCategoryPath(category)
+    : undefined;
+
+  return {
+    slug,
+    absPath,
+    postDir: path.dirname(absPath),
+    title: isIndex ? path.posix.basename(parsed.dir) : parsed.name,
+    category: normalizedCategory,
+  };
+}
+
+function parseFrontmatter(
+  raw: string,
+  fallbackTitle: string,
+  fallbackDate: string,
+  fallbackCategory?: string,
+): { data: PostFrontmatter; content: string } {
+  const parsed = parseMatterSafely(raw);
+  const fm = isRecord(parsed.data) ? parsed.data as Partial<PostFrontmatter> : {};
   const data: PostFrontmatter = {
     title: fm.title ?? fallbackTitle,
-    date: fm.date ? new Date(fm.date).toISOString() : new Date().toISOString(),
+    date: fm.date ? new Date(fm.date).toISOString() : fallbackDate,
     description: fm.description,
     category: typeof fm.category === 'string'
       ? normalizeCategoryPath(fm.category)
-      : undefined,
+      : fallbackCategory,
     tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
     draft: Boolean(fm.draft),
     cover: fm.cover,
@@ -86,33 +132,52 @@ function parseFrontmatter(raw: string, fallbackTitle: string): { data: PostFront
   return { data, content: parsed.content };
 }
 
-function toMeta(slug: string, raw: string): PostMeta {
-  const { data, content } = parseFrontmatter(raw, slug);
+
+function parseMatterSafely(raw: string): { data: unknown; content: string } {
+  try {
+    return matter(raw);
+  } catch {
+    return { data: {}, content: stripLeadingFrontmatter(raw) };
+  }
+}
+
+function stripLeadingFrontmatter(raw: string): string {
+  if (!raw.startsWith('---')) return raw;
+
+  const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(raw);
+  return match ? raw.slice(match[0].length) : raw;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
+function toMeta(source: MarkdownSource, raw: string): PostMeta {
+  const fallbackDate = new Date(getSourceMtimeMs(source.absPath)).toISOString();
+  const { data, content } = parseFrontmatter(
+    raw,
+    source.title,
+    fallbackDate,
+    source.category,
+  );
   const stats = readingTime(content);
   return {
     ...data,
-    slug,
+    slug: source.slug,
     readingTime: stats.text,
     wordCount: stats.words,
   };
 }
 
-/**
- * Cached only in production (build-time SSG scans this once).
- * In development we re-scan every call so newly-added markdown files
- * appear without a server restart.
- */
 let postsCache: PostMeta[] | null = null;
 let searchDocumentsCache: CommandMenuPost[] | null = null;
 const renderedPostCache = new Map<string, RenderedPostCacheEntry>();
 
 export function getAllPosts(): PostMeta[] {
   if (postsCache && process.env.NODE_ENV === 'production') return postsCache;
-  const files = collectMarkdownFiles();
-  const posts = files
-    .map(({ slug, absPath }) => {
-      const raw = fs.readFileSync(absPath, 'utf8');
-      return toMeta(slug, raw);
+  const posts = collectMarkdownFiles()
+    .map((source) => {
+      const raw = fs.readFileSync(source.absPath, 'utf8');
+      return toMeta(source, raw);
     })
     .filter((p) => process.env.NODE_ENV === 'development' || !p.draft)
     .sort((a, b) => +new Date(b.date) - +new Date(a.date));
@@ -127,15 +192,15 @@ export function getSearchDocuments(): CommandMenuPost[] {
   }
 
   const documents = collectMarkdownFiles()
-    .map(({ slug, absPath }) => {
-      const raw = fs.readFileSync(absPath, 'utf8');
-      const meta = toMeta(slug, raw);
-      const { content } = parseFrontmatter(raw, slug);
+    .map((source) => {
+      const raw = fs.readFileSync(source.absPath, 'utf8');
+      const meta = toMeta(source, raw);
+      const { content } = parseFrontmatter(raw, source.title, meta.date, source.category);
 
       return {
         draft: Boolean(meta.draft),
         document: {
-          slug,
+          slug: meta.slug,
           title: meta.title,
           description: meta.description,
           category: meta.category,
@@ -171,7 +236,7 @@ export function getPostMeta(slug: string): PostMeta | null {
   }
 
   const raw = fs.readFileSync(file.absPath, 'utf8');
-  return toMeta(file.slug, raw);
+  return toMeta(file, raw);
 }
 
 export async function getPost(slug: string): Promise<Post | null> {
@@ -182,11 +247,12 @@ export async function getPost(slug: string): Promise<Post | null> {
   if (cached) return cached;
 
   const raw = fs.readFileSync(file.absPath, 'utf8');
-  const meta = toMeta(file.slug, raw);
-  const { content } = parseFrontmatter(raw, file.slug);
+  const meta = toMeta(file, raw);
+  const { content } = parseFrontmatter(raw, file.title, meta.date, file.category);
   const html = await renderMarkdown(content, {
     slug: file.slug,
-    postDir: file.bundled ? file.postDir : undefined,
+    postDir: file.postDir,
+    resolveObsidianLink: (target) => resolveObsidianPostHref(target, file),
   });
   const toc = extractToc(content);
   const post = { ...meta, raw: content, html, toc };
@@ -201,7 +267,6 @@ export function getAdjacentPosts(slug: string): { prev: PostMeta | null; next: P
   const posts = getAllPosts();
   const idx = posts.findIndex((p) => p.slug === slug);
   if (idx === -1) return { prev: null, next: null };
-  // posts are sorted desc by date; "next" = newer (lower idx), "prev" = older (higher idx)
   return {
     next: idx > 0 ? posts[idx - 1] : null,
     prev: idx < posts.length - 1 ? posts[idx + 1] : null,
@@ -284,10 +349,6 @@ function safeDecode(s: string): string {
 }
 
 function findMarkdownSource(slug: string): MarkdownSource | null {
-  // Next.js dev mode does NOT URL-decode dynamic route params for us, while
-  // prod (via generateStaticParams) matches against the raw string. Decoding
-  // unconditionally is safe — already-decoded slugs are unaffected unless they
-  // contain a literal '%', which filenames effectively never do.
   const decoded = safeDecode(slug);
   return collectMarkdownFiles().find((file) => file.slug === decoded) ?? null;
 }
@@ -327,3 +388,56 @@ export function groupByYear(posts: PostMeta[]): { year: number; posts: PostMeta[
     .sort((a, b) => b[0] - a[0])
     .map(([year, posts]) => ({ year, posts }));
 }
+
+function resolveObsidianPostHref(target: string, currentSource: MarkdownSource): string | null {
+  const normalized = normalizeObsidianPostTarget(target);
+  if (!normalized) return null;
+
+  const sources = collectMarkdownFiles();
+  const currentDir = toPosixPath(path.relative(CONTENT_ROOT, currentSource.postDir));
+  const relativeCandidates = [
+    path.posix.normalize(path.posix.join(currentDir, normalized)),
+    normalized,
+  ];
+
+  for (const candidate of relativeCandidates) {
+    const withoutExtension = candidate.replace(MARKDOWN_SOURCE_RE, '');
+    const exact = sources.find((source) => source.slug === withoutExtension);
+    if (exact) return getPostHref(exact.slug);
+  }
+
+  const basename = path.posix.basename(normalized).replace(MARKDOWN_SOURCE_RE, '');
+  const byBasename = sources.filter((source) => path.posix.basename(source.slug) === basename);
+  if (byBasename.length === 1) {
+    return getPostHref(byBasename[0].slug);
+  }
+
+  return null;
+}
+
+function normalizeObsidianPostTarget(target: string): string | null {
+  const stripped = target
+    .split('#')[0]
+    .trim()
+    .replace(/^<|>$/g, '')
+    .replace(/\\/g, '/');
+
+  if (!stripped) return null;
+  if (/^(?:[a-z][a-z\d+.-]*:|\/\/|\/|#|\?)/i.test(stripped)) {
+    return null;
+  }
+
+  const normalized = path.posix.normalize(stripped).replace(/^\.\/+/, '');
+  if (!normalized || normalized === '.' || normalized.startsWith('../')) {
+    return null;
+  }
+
+  return normalized;
+}
+
+function toPosixPath(value: string): string {
+  return value.split(path.sep).join('/');
+}
+
+
+

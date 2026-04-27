@@ -1,8 +1,8 @@
 ---
-category: "Windows系统部署"
-tags: ["choco仓库"]
-date: "2026-04-21"
+date created: Thursday, January 29th 2026, 8:48:09 pm
+date modified: Thursday, January 29th 2026, 10:07:02 pm
 ---
+
 
 ## choco 仓库测试
 
@@ -11,29 +11,28 @@ date: "2026-04-21"
 ```shell
 docker run -d -p 8081:8081 --name nexus sonatype/nexus3
 ```
-
 - `3.88.0-08` community edition
 
 2. 访问 `http://example.host.com:8081`，开启匿名访问
 
 3. 创建 `Blob Store`（可选但建议），用于专门存放 Windows 软件包，方便后期清理和备份。此处只是测试，没有创建，使用 `default blob store`
 
-4. 创建 `Repository`，选择 _`nuget (hosted)`_ 类型，配置参数：
-   - Name: `choco-local`
-   - Online: 勾选。
-   - Storage: 选择刚才创建的 `default blob store`。
-   - Deployment Policy: 建议选 `Allow redeploy`（允许覆盖更新）。
+4. 创建 `Repository`，选择 *`nuget (hosted)`* 类型，配置参数：
+	- Name: `choco-local`
+	- Online: 勾选。
+	- Storage: 选择刚才创建的 `default blob store`。
+	- Deployment Policy: 建议选 `Allow redeploy`（允许覆盖更新）。
 
-5. 创建 `Repository`，选择 _`nuget (group)`_ 类型，配置参数：
-   - Name: `choco-group`
-   - Online: 勾选。
-   - Member: 添加刚才创建的 `choco-local`
-   - 必须把 `nuget (hosted)` 套进 `nuget (group)` 里
+5. 创建 `Repository`，选择 *`nuget (group)`* 类型，配置参数：
+	- Name: `choco-group`
+	- Online: 勾选。
+	- Member: 添加刚才创建的 `choco-local`
+	- 必须把 `nuget (hosted)` 套进 `nuget (group)` 里
 
 6. 配置 API Key
-   - 点击页面右上角的个人 `ID（admin）`。
-   - 选择 `NuGet API Key`，点击 `Access API Key`。
-   - 输入当前登录密码，获取一串秘钥。记录下这串 Key，后面上传 `nupkg` 包时要用。
+	- 点击页面右上角的个人 `ID（admin）`。
+	- 选择 `NuGet API Key`，点击 `Access API Key`。
+	- 输入当前登录密码，获取一串秘钥。记录下这串 Key，后面上传 `nupkg` 包时要用。
 
 7. 准备一个测试软件包 (`.nupkg`)，并上传到 `Nexus`，见 [[#把 `7-Zip` 做成 `nupkg` 包]]
 
@@ -42,25 +41,21 @@ docker run -d -p 8081:8081 --name nexus sonatype/nexus3
 ```powershell
 choco source add -n=MyNexus -s="http://192.168.17.241:8081/repository/choco-group/"
 ```
-
 - 添加 `group repo` 的 url
 
 ```powershell
 choco source list
 ```
-
 - 查看添加的测试源
 
 ```powershell
 choco install my7zip --source=MyNexus
 ```
-
 - 安装测试
 
 ```powershell
 choco source remove -n=MyNexus
 ```
-
 - 测试完成后删除测试源
 
 7. 查看安装的包
@@ -147,7 +142,6 @@ choco pack
 ```powershell
 choco push my7zip.1.0.0.nupkg --source="http://192.168.17.241:8081/repository/choco-local/" --api-key="072f5036-7c1e-3ab4-a406-da301e810d73"
 ```
-
 - 通过 `http` 发送 `api key` 会告警不安全，此处因为是测试，直接添加 `--force` 强制执行
 - 如果开启了匿名访问，可以直接上传，如果没开，还会让输入一个 `repo` 的凭据，可以使用部署 `nexus` 时的默认 `admin` 账号
 
@@ -174,9 +168,13 @@ my7zip.1.0.0.nupkg was pushed successfully to http://192.168.17.241:8081/reposit
 这种方式把 `.exe` 直接塞进 `.nupkg`。优点是：客户端安装时**不需要联网**，直接从你的 Nexus 仓库拉下来就能装。
 
 1. **准备素材**：比如你有一个 `Notepad++_Installer.exe`。
+    
 2. **创建文件夹**：执行 `choco new my-software`。
+    
 3. **搬运文件**：把 `Notepad++_Installer.exe` 复制到 `my-software/tools` 目录下。
+    
 4. **修改脚本**：编辑 `tools/chocolateyInstall.ps1`，把里面的逻辑改成：“运行当前目录下的这个 `.exe`，并使用静默安装参数 `/S`”。
+    
 5. **打包**：执行 `choco pack`。
 
 ### 做法 B：制作“在线包”（适合能上外网的环境）
@@ -184,8 +182,12 @@ my7zip.1.0.0.nupkg was pushed successfully to http://192.168.17.241:8081/reposit
 这种方式不塞入 `.exe`，只塞入一个“下载地址”。
 
 1. **修改脚本**：在 `chocolateyInstall.ps1` 里写上：`url = "https://npp.org/setup.exe"`。
+    
 2. **打包**：执行 `choco pack`，得到的 `.nupkg` 非常小（只有几 KB）。
+    
 3. **结果**：客户端安装时，Chocolatey 会先从你的 Nexus 下脚本，然后**自动去官网下载** `.exe`。
+
+
 
 ## boxstarter
 
@@ -194,7 +196,6 @@ Set-ExecutionPolicy Bypass -Scope Process -Force
 iex ((New-Object System.Net.WebClient).DownloadString('https://boxstarter.org/bootstrapper.ps1'))
 Get-Boxstarter -Force
 ```
-
 - `Windows` 默认的 `PowerShell` 执行策略通常是 `Restricted` 或 `RemoteSigned`，`iex` 直接下载的脚本无法执行
 - `Set-ExecutionPolicy Bypass -Scope Process -Force` 临时允许当前 `PowerShell` 进程运行脚本
 - `New-Object System.Net.WebClient` 创建一个最基础的 HTTP 客户端，下载 `boxstarter` 的 `bootstrapper.ps1` 脚本，并立刻在内存中执行
@@ -202,7 +203,6 @@ Get-Boxstarter -Force
 - `Get-Boxstarter` 负责在当前 powershell会话 导入 `Boxstarter` 模块，初始化当前会话
 
 `boxstarter_init.ps1`
-
 ```powershell
 # Boxstarter 常规推荐
 $Boxstarter.RebootOk = $true
@@ -246,7 +246,6 @@ $newPath = "$oldPath;C:\Program Files\Git\bin"
 Install-WindowsUpdate -AcceptEula
 
 ```
-
 - 假设脚本中间触发了重启，系统重启，自动登录，脚本从中断点继续执行，你不需要写任何重启判断逻辑。
 
 ```powershell
@@ -258,9 +257,9 @@ Install-BoxstarterPackage -PackageName .\init.ps1
 在执行过程中，Boxstarter 会：
 
 - 记录：
-  - 当前执行到哪一步
-  - 当前脚本文件
-  - 执行参数
+    - 当前执行到哪一步
+    - 当前脚本文件
+    - 执行参数
 - 存到磁盘（例如 ProgramData 目录）
 
 👉 重启后还能知道“我刚才干到哪了”
@@ -297,25 +296,25 @@ Boxstarter 会（在你允许的前提下）：
 
 👉 这一步是 Boxstarter 最大的“魔法感”来源
 
+
 ### boxstarter 和 packer
 
 > [!question]+ boxstarter 和 packer 的区别
->
 > - Boxstarter 是「机器创建后做什么」，是 运行时初始化（post-provision）
 > - Packer 是「机器创建时长什么样」，是 镜像构建（pre-provision）
 
-| 维度         | Boxstarter            | Packer                |
-| ------------ | --------------------- | --------------------- |
-| 所在阶段     | VM 创建 **之后**      | VM 创建 **之前**      |
-| 作用对象     | 单台正在运行的机器    | 一个可复用的 **镜像** |
-| 本质         | PowerShell 自动化脚本 | 镜像构建工具          |
-| 是否生成镜像 | ❌                    | ✅                    |
-| 是否可重用   | 中（脚本级）          | 高（镜像级）          |
-| 运行成本     | 每台 VM 都跑一遍      | 只在构建镜像时跑      |
-| 启动速度     | 慢（要现装）          | 快（开机即就绪）      |
-| 适合改配置   | 非常适合              | 一般                  |
-| 适合装软件   | 适合                  | 非常适合（一次装好）  |
-| 支持重启续跑 | ✅（强项）            | 由 provisioner 决定   |
+| 维度     | Boxstarter       | Packer           |
+| ------ | ---------------- | ---------------- |
+| 所在阶段   | VM 创建 **之后**     | VM 创建 **之前**     |
+| 作用对象   | 单台正在运行的机器        | 一个可复用的 **镜像**    |
+| 本质     | PowerShell 自动化脚本 | 镜像构建工具           |
+| 是否生成镜像 | ❌                | ✅                |
+| 是否可重用  | 中（脚本级）           | 高（镜像级）           |
+| 运行成本   | 每台 VM 都跑一遍       | 只在构建镜像时跑         |
+| 启动速度   | 慢（要现装）           | 快（开机即就绪）         |
+| 适合改配置  | 非常适合             | 一般               |
+| 适合装软件  | 适合               | 非常适合（一次装好）       |
+| 支持重启续跑 | ✅（强项）            | 由 provisioner 决定 |
 
 > 1️⃣ 用 Packer 做“厚镜像”（Heavy Image）
 
@@ -346,8 +345,8 @@ Boxstarter 会（在你允许的前提下）：
 
 - Packer 重建镜像成本高
 - 每改一个小设置就要：
-  - 重跑 Packer
-  - 发布新镜像
+    - 重跑 Packer
+    - 发布新镜像
 - 对“经常变的东西”不友好
 
 👉 Boxstarter 更灵活
@@ -361,12 +360,12 @@ Boxstarter 会（在你允许的前提下）：
 
 👉 Packer 能把成本前移
 
+
 ## powershell + yaml
 
 1. 定义1个软件清单
 
-_`software-set.yaml`_
-
+*`software-set.yaml`*
 ```yaml
 source: MyNexus
 
@@ -382,7 +381,6 @@ packages:
 
   - name: googlechrome
 ```
-
 - 以后只维护这个文件
 
 2. 安装 `powershell-yaml` 模块（一次即可）
@@ -393,8 +391,7 @@ Install-Module powershell-yaml -Scope AllUsers -Force
 
 3. 写一个通用的安装脚本
 
-_`Install-SoftwareSet.ps1`_
-
+*`Install-SoftwareSet.ps1`*
 ```powershell
 param (
     [string]$ConfigFile = ".\software-set.yaml"
@@ -435,11 +432,13 @@ foreach ($pkg in $config.packages) {
 .\Install-SoftwareSet.ps1 -ConfigFile .\software-set.yaml
 ```
 
+
+
 ## 制品库
 
-| 方案              | 简介                                           | 适用场景                              |
-| ----------------- | ---------------------------------------------- | ------------------------------------- |
-| Sonatype Nexus    | 最流行的制品库，支持 NuGet（Choco 包的格式）。 | 绝大多数互联网公司、开发团队。        |
-| JFrog Artifactory | 企业级首选，功能极其强大，支持复杂的权限审计。 | 世界 500 强、银行、保险、军工。       |
-| ProGet            | Chocolatey 官方推荐的商业方案，集成度最高。    | 对 Windows 环境有深度定制需求的企业。 |
-| Simple Server     | 官方提供的轻量级 NuGet 镜像。                  | 中小型公司或实验室环境。              |
+| 方案                | 简介                            | 适用场景                    |
+| ----------------- | ----------------------------- | ----------------------- |
+| Sonatype Nexus    | 最流行的制品库，支持 NuGet（Choco 包的格式）。 | 绝大多数互联网公司、开发团队。         |
+| JFrog Artifactory | 企业级首选，功能极其强大，支持复杂的权限审计。       | 世界 500 强、银行、保险、军工。      |
+| ProGet            | Chocolatey 官方推荐的商业方案，集成度最高。   | 对 Windows 环境有深度定制需求的企业。 |
+| Simple Server     | 官方提供的轻量级 NuGet 镜像。            | 中小型公司或实验室环境。            |

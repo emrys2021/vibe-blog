@@ -17,6 +17,7 @@ import {
   useRegisterActions,
 } from 'kbar';
 import { getCategoryHref } from '@/lib/categories';
+import { getPostHref } from '@/lib/post-urls';
 import { applyTheme, getTheme, type Theme } from '@/lib/theme';
 import type { CommandMenuData, CommandMenuFullTextData } from '@/lib/types';
 import { siteConfig } from '../../blog.config';
@@ -158,13 +159,13 @@ export function CommandMenuOverlay({
     const postActions = data.posts.map((post) => ({
       id: `post-${post.slug}`,
       name: post.title,
-      subtitle: post.description ?? `/posts/${post.slug}`,
+      subtitle: post.description ?? getPostHref(post.slug),
       section: SECTIONS.posts,
       icon: 'md',
       keywords: fullTextBySlug.has(post.slug)
         ? `${post.searchText} ${fullTextBySlug.get(post.slug)}`
         : post.searchText,
-      perform: () => router.push(`/posts/${encodeURIComponent(post.slug)}`),
+      perform: () => router.push(getPostHref(post.slug)),
     }));
 
     const tagActions = data.tags.map((tag) => ({
@@ -198,12 +199,12 @@ export function CommandMenuOverlay({
         keywords: 'random surprise article post explore',
         perform: () => {
           const currentSlug = pathname?.startsWith('/posts/')
-            ? decodeURIComponent(pathname.split('/').pop() ?? '')
+            ? decodeURI(pathname.slice('/posts/'.length))
             : null;
           const pool = data.posts.filter((post) => post.slug !== currentSlug);
           const source = pool.length > 0 ? pool : data.posts;
           const randomPost = source[Math.floor(Math.random() * source.length)];
-          router.push(`/posts/${encodeURIComponent(randomPost.slug)}`);
+          router.push(getPostHref(randomPost.slug));
         },
       });
     }
@@ -824,3 +825,5 @@ function scrollToHeading(id: string) {
   window.history.replaceState(null, '', `#${id}`);
   window.scrollTo({ top, behavior: 'smooth' });
 }
+
+

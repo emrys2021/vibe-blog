@@ -1,4 +1,5 @@
 import { getAllPosts } from '@/lib/posts';
+import { encodeSlugPath } from '@/lib/post-urls';
 import { siteConfig } from '../../../blog.config';
 
 export const dynamic = 'force-static';
@@ -18,7 +19,7 @@ export function GET() {
   const feedUrl = `${siteConfig.url}${FEED_PATH}`;
   const items = posts
     .map((post) => {
-      const link = `${siteConfig.url}/posts/${encodeURIComponent(post.slug)}`;
+      const link = `${siteConfig.url}/posts/${encodeSlugPath(post.slug)}`;
       const categories = [
         post.category ? `<category>${escapeXml(post.category)}</category>` : '',
         ...(post.tags ?? []).map((tag) => `<category>${escapeXml(tag)}</category>`),
@@ -60,3 +61,4 @@ ${items}
     headers: { 'Content-Type': 'application/xml; charset=utf-8' },
   });
 }
+

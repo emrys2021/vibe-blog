@@ -1,51 +1,49 @@
----
-category: "服务/虚拟化/hashicorp"
-tags: ["虚拟化", "packer"]
-date: "2026-04-21"
----
 
 ## 相关术语
 
 - **Debian Installer** (d-i)
-  Classic installer that has been used until 18.04, deprecated in 20.04.
+Classic installer that has been used until 18.04, deprecated in 20.04.
 
 - **Ubiquity**
-  Graphical [desktop installer](https://wiki.ubuntu.com/Ubiquity). D-i preseed based [auto install](https://wiki.ubuntu.com/UbiquityAutomation) is available. See [manual](http://manpages.ubuntu.com/manpages/jammy/man8/ubiquity.8.html) also. LiveCD can be booted from [nfsroot](https://wiki.ubuntu.com/LiveCDNetboot) [(alternate documentation).](https://help.ubuntu.com/community/Installation/LocalNet#A_variation:_Booting_the_.22Live_CD.22_image) There are a number of [arguments](https://wiki.ubuntu.com/DesktopCDOptions) that you can pass to the installer on the kernel command line.
+Graphical [desktop installer](https://wiki.ubuntu.com/Ubiquity). D-i preseed based [auto install](https://wiki.ubuntu.com/UbiquityAutomation) is available. See [manual](http://manpages.ubuntu.com/manpages/jammy/man8/ubiquity.8.html) also. LiveCD can be booted from [nfsroot](https://wiki.ubuntu.com/LiveCDNetboot) [(alternate documentation).](https://help.ubuntu.com/community/Installation/LocalNet#A_variation:_Booting_the_.22Live_CD.22_image) There are a number of [arguments](https://wiki.ubuntu.com/DesktopCDOptions) that you can pass to the installer on the kernel command line.
 
 - **Ubuntu Desktop Installer**
-  New desktop installer, that replaces Ubiquity. GitHub repo is [here.](https://github.com/canonical/ubuntu-desktop-installer) Discussion on [Ubuntu Discourse](https://discourse.ubuntu.com/t/new-desktop-installer-preview-build/24765) about the new preview build. [Refreshing the Ubuntu Desktop Installer](https://discourse.ubuntu.com/t/refreshing-the-ubuntu-desktop-installer/20659) thread.
+New desktop installer, that replaces Ubiquity. GitHub repo is [here.](https://github.com/canonical/ubuntu-desktop-installer) Discussion on [Ubuntu Discourse](https://discourse.ubuntu.com/t/new-desktop-installer-preview-build/24765) about the new preview build. [Refreshing the Ubuntu Desktop Installer](https://discourse.ubuntu.com/t/refreshing-the-ubuntu-desktop-installer/20659) thread.
 
 - **Subiquity**
-  Server installer frontend. GitHub repo can be [found here.](https://github.com/canonical/subiquity)
+Server installer frontend. GitHub repo can be [found here.](https://github.com/canonical/subiquity)
 
 - **Casper**
-  An initramfs hook to boot live, preinstalled systems from read-only media. [See Casper manpage.](http://manpages.ubuntu.com/manpages/jammy/man7/casper.7.html) Ubiquity desktop and subiquity server install ISO medias relies on it.
+An initramfs hook to boot live, preinstalled systems from read-only media. [See Casper manpage.](http://manpages.ubuntu.com/manpages/jammy/man7/casper.7.html) Ubiquity desktop and subiquity server install ISO medias relies on it.
 
 - **Curtin**
-  [The curt installer](https://curtin.readthedocs.io/en/latest/index.html) is written in Python. Subiquity runs curtin in the background.
+[The curt installer](https://curtin.readthedocs.io/en/latest/index.html) is written in Python. Subiquity runs curtin in the background.
 
 - **Cloud-init**
-  Final [configuration](https://cloudinit.readthedocs.io/en/latest/) in the running system. Subiquity creates initial user, sets up ssh authorized key in the target system through cloud-init.
+Final [configuration](https://cloudinit.readthedocs.io/en/latest/) in the running system. Subiquity creates initial user, sets up ssh authorized key in the target system through cloud-init.
 
 > [!question]+ Casper
 > Linux 启动后必须有一个 `/`，这个 `/` 就是 root filesystem（根文件系统）。
->
+> 
 > initrd 被解压到内存后，构成一个临时的根文件系统 initramfs，执行 /init，/init 调用 casper 模块，casper 的任务是找到真正的 root filesystem，
 > 在 ubuntu live 环境，真正的 root filesystem 是 filesystem.squashfs（位于 ISO 解压后的 casper/filesystem.squashfs），
 > casper 找到 squashfs 后，创建一个临时可写的 tmpfs，只读的squashfs 和可写的 tmpfs 共同构建了一个 overlayfs，然后执行 switch_root 切换到这个 overlayfs root filesystem
->
+> 
 > 在本文中，内核启动参数设置 boot=casper，casper 使用 http 下载 iso，然后从 iso 内找到 squashfs
 
-| 特性          | 旧版本 (14.04, 16.04, 18.04) | 新版本 (20.04, 22.04, 24.04+)        |
-| ------------- | ---------------------------- | ------------------------------------ |
-| 安装器名称    | Debian Installer (d-i)       | Subiquity                            |
-| 配置文件      | `preseed.cfg`                | `user-data` (Autoinstall)            |
-| 内核/引导文件 | `netboot.tar.gz`             | `vmlinuz` + `initrd` (来自 Live ISO) |
-| 配置语法      | 键值对 (Key-Value)           | YAML 格式                            |
+| 特性      | 旧版本 (14.04, 16.04, 18.04) | 新版本 (20.04, 22.04, 24.04+)         |
+| ------- | ------------------------- | ---------------------------------- |
+| 安装器名称   | Debian Installer (d-i)    | Subiquity                          |
+| 配置文件    | `preseed.cfg`             | `user-data` (Autoinstall)          |
+| 内核/引导文件 | `netboot.tar.gz`          | `vmlinuz` + `initrd` (来自 Live ISO) |
+| 配置语法    | 键值对 (Key-Value)           | YAML 格式                            |
+
 
 > [!question]+ autoinstall 和 cloud-config
 > [Providing autoinstall configuration - Ubuntu installation documentation](https://canonical-subiquity.readthedocs-hosted.com/en/latest/tutorial/providing-autoinstall.html)
 > cloud-config 是 cloud-init 使用的配置，这个配置也可以提供给 subiquity 安装器用来自动化安装，而提供的方式就是顶级元素 autoinstall
+
+
 
 ## Ref
 
@@ -57,52 +55,51 @@ date: "2026-04-21"
 
 ## 环境准备
 
-|      | vm1                                                                                                          | vm2                                                                                                       |
-| ---- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------- |
-| 角色 | pxe server                                                                                                   | pxe client                                                                                                |
-| 配置 | ubuntu2204，2张网卡；<br>磁盘设置大点，多版本部署要上传很多iso，改成40G；<br>                                | ubuntu2204，默认内存4G改成8G，默认硬盘20G改成60G<br>固件类型设置uefi；<br>启动进入固件，pxe启动设为第一； |
-| 网络 | pxe server 网卡1通过宿主机连接内网物理网络；<br>pxe server 网卡2连接自定义虚拟网络vmnet2，静态ip 192.168.1.1 | pxe client 网卡1连接vmnet2，从vm1动态获取ip；<br>dhcp 下发的 dns server 为物理网络的 dns server           |
+|     | vm1                                                                            | vm2                                                                         |
+| --- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| 角色  | pxe server                                                                     | pxe client                                                                  |
+| 配置  | ubuntu2204，2张网卡；<br>磁盘设置大点，多版本部署要上传很多iso，改成40G；<br>                            | ubuntu2204，默认内存4G改成8G，默认硬盘20G改成60G<br>固件类型设置uefi；<br>启动进入固件，pxe启动设为第一；      |
+| 网络  | pxe server 网卡1通过宿主机连接内网物理网络；<br>pxe server 网卡2连接自定义虚拟网络vmnet2，静态ip 192.168.1.1 | pxe client 网卡1连接vmnet2，从vm1动态获取ip；<br>dhcp 下发的 dns server 为物理网络的 dns server |
+
 
 > [!failure]+ 开机卡initramfs
 > 由于要从 `vm1` 下载 `vmlinuz,initrd,iso` 等文件到内存，内存设置大点，不然 `vm2` 下载完 `vmlinuz,initrd` 后卡在 `initramfs` 界面，虚拟机默认4G改成8G
 
 > [!failure]+ aborting install since no mirror is usable
 > 在 `autoinstall` 阶段，`user-data` 中 `apt` 相关配置需要连接 `apt` 镜像源，而 `vm2` 只有一个网卡 `ens33` 连接局域网 `vmnet2`，且网关是 `vm1`，所以配置 `vm1` 转发流量：
->
+> 
 > ```shell
 > echo 'net.ipv4.ip_forward=1' | sudo tee /etc/sysctl.d/99-ipforward.conf
 > sudo sysctl --system
 > sysctl net.ipv4.ip_forward
 > ```
->
+> 
 > ```shell
 > sudo iptables -t nat -A POSTROUTING -o ens33 -j MASQUERADE
 > ```
->
 > - `sudo iptables -t nat -A POSTROUTING -o ens33 -j MASQUERADE`：所有从 ens33 发出的包，源ip 都转成 ens33 的 ip
->
+> 
 > ```shell
 > iptables -A FORWARD -i ens34 -o ens33 -j ACCEPT
 > iptables -A FORWARD -i ens33 -o ens34 -m state --state ESTABLISHED,RELATED -j ACCEPT
 > ```
->
 > - 允许数据包从 PXE 网段（`ens34`）流向内网（`ens33`）。放行去程报文。
 > - 对于从 ens33 转到 ens34 的报文，只有之前已经从 ens34 往 ens33 建立连接的报文才能通过，对回程报文进行管控。
->
+> 
 > ```
 > sudo apt install iptables-persistent -y
 > sudo netfilter-persistent save
 > sudo iptables -t filter -L -v -n
 > sudo iptables -t nat -L -v -n
 > ```
->
 > - 使用 `netfilter-persistent` 将配置持久化，使用 iptables 查看持久化后的配置
+
 
 ---
 
 ## 1. pxe
 
-Ubuntu22.04:
+Ubuntu22.04: 
 [How to netboot the server installer on amd64 - Ubuntu Server documentation](https://documentation.ubuntu.com/server/how-to/installation/how-to-netboot-the-server-installer-on-amd64/#configure-dhcp-bootp-and-tftp)
 
 The process for network booting the live server installer is similar for both modes and goes like this:
@@ -120,7 +117,6 @@ The difference between UEFI and legacy modes is that in UEFI mode the bootloader
 ### 1.1 dhcp server
 
 > [!abstract]+ dhcp server 的作用
->
 > 1. 提供基本网络配置：ip，gateway, dns server
 > 2. 提供 next server：告知客户端 tftp server 地址，指引其下载 bootloader
 > 3. 提供 bootfile name：告知客户端 bootloader 的路径，可以根据条件判断返回 legacy bootloader 还是 uefi bootloader
@@ -150,7 +146,6 @@ nano /etc/default/isc-dhcp-server
 INTERFACESv4="ens34"
 INTERFACESv6=""
 ```
-
 - 配置 `dhcp server` 只在指定接口上处理 `dhcp request`
 
 4. 配置 pxe 相关配置
@@ -183,7 +178,6 @@ subnet 192.168.1.0 netmask 255.255.255.0 {
     }
 }
 ```
-
 - `next-server` 指定 `tftp server` 地址
 - 通过请求报文中的 `client-arch` 字段判断固件类型是 `legacy` 还是 `uefi`
 - `dns server` 如果是虚拟机环境，设置 nat 网络的 dns server，公司环境设置内网 dns server
@@ -193,7 +187,6 @@ subnet 192.168.1.0 netmask 255.255.255.0 {
 ```shell
 dhcpd -t -cf /etc/dhcp/dhcpd.conf
 ```
-
 - `-t`: 检测配置文件语法
 
 6. 启动服务，检查状态
@@ -204,12 +197,10 @@ systemctl enable isc-dhcp-server
 systemctl status isc-dhcp-server
 ```
 
-_dhcp抓包排查_
-
+*dhcp抓包排查*
 ```shell
 sudo tcpdump -i ens37 port 67 or port 68 -n -vv -s0
 ```
-
 ### 1.2 tftp server
 
 1. 安装 tftp server
@@ -253,8 +244,8 @@ mkdir -p /srv/tftp/grub
 mkdir -p /srv/tftp/boot/casper/ubuntu/{1604,1804,2004,2204,2404,2504}/server
 ```
 
-_tftp抓包排查_
 
+*tftp抓包排查*
 ```shell
 sudo tcpdump -i ens37 udp port 69 -n -vv
 ```
@@ -269,7 +260,7 @@ sudo nano /etc/dnsmasq.conf
 ```
 
 ```shell
-#Interface information
+#Interface information 
 #--use ip addr to see the name of the interface on your system
 interface=eth37,lo
 bind-interfaces
@@ -304,7 +295,7 @@ enable-tftp
 tftp-root=/tftp
 
 #--Detect architecture and send the correct bootloader file
-dhcp-match=set:efi-x86_64,option:client-arch,7
+dhcp-match=set:efi-x86_64,option:client-arch,7 
 dhcp-boot=tag:efi-x86_64,grub/bootx64.efi
 ```
 
@@ -317,8 +308,8 @@ sudo systemctl status dnsmasq
 
 - `vmlinuz` 和 `initrd` 构成了类似 `windows boot image` 的效果[^1]，加载后用来下载最终的 install image
 - `boot imge` 的版本需要和 iso 的版本一致
-  - 分别从 ubuntu2004,2204,2404,2504 server 版本的 iso 中提取对应的 boot image，放入 `/srv/tftp/boot/casper/ubuntu/<版本号>/server` 下
-  - 分别从 ubuntu2004,2204,2404,2504 desktop 版本的 iso 中提取对应的 boot image，放入 `/srv/tftp/boot/casper/ubuntu/<版本号>/desktop` 下
+	- 分别从 ubuntu2004,2204,2404,2504 server 版本的 iso 中提取对应的 boot image，放入 `/srv/tftp/boot/casper/ubuntu/<版本号>/server` 下
+	- 分别从 ubuntu2004,2204,2404,2504 desktop 版本的 iso 中提取对应的 boot image，放入 `/srv/tftp/boot/casper/ubuntu/<版本号>/desktop` 下
 
 ```shell
 mkdir -p /srv/tftp/boot/casper/ubuntu/{1604,1804,2004,2204,2404,2504}/server
@@ -336,7 +327,6 @@ sudo cp /mnt/iso/casper/{vmlinuz,initrd} /srv/tftp/boot/casper/ubuntu/2204/serve
 sudo cp /mnt/iso/boot/grub/fonts/unicode.pf2 /srv/tftp/grub
 umount /mnt/iso
 ```
-
 - 这个目录在 [[#legacy bios bootloader configuration file]] 和 [[#uefi bootloader configuration file]] 中需要指定
 
 #### 多版本目录结构设计
@@ -404,6 +394,8 @@ root@jkl /s/t/grub [1]# tree -L 6 /srv/tftp
     └── unicode.pf2
 ```
 
+
+
 ### 1.4 bootloader
 
 The `NBP` file may be a lightweight `bootloader` such as `PXELINUX(from Syslinux)`, an `iPXE image`, or act as a Windows WDS(Windows Deployment Services), etc.
@@ -433,16 +425,15 @@ sudo cp /usr/lib/syslinux/modules/bios/{ldlinux.c32,libutil.c32,menu.c32,vesamen
 nano /srv/tftp/bios/pxelinux.cfg/default
 ```
 
-_`/srv/tftp/bios/pxelinux.cfg/default`_
-
+*`/srv/tftp/bios/pxelinux.cfg/default`*
 ```config
 DEFAULT Ubuntu Desktop 22.04
 MENU TITLE ULTIMATE PXE SERVER - By JackyLeo - Ver 1.0
-PROMPT 0
+PROMPT 0 
 TIMEOUT 10
 
 MENU COLOR TABMSG  37;40  #ffffffff #00000000
-MENU COLOR TITLE   37;40  #ffffffff #00000000
+MENU COLOR TITLE   37;40  #ffffffff #00000000 
 MENU COLOR SEL      7     #ffffffff #00000000
 MENU COLOR UNSEL    37;40 #ffffffff #00000000
 MENU COLOR BORDER   37;40 #ffffffff #00000000
@@ -453,7 +444,6 @@ LABEL Ubuntu Desktop 22.04
 	INITRD ../boot/casper/ubuntu/2204/server/initrd
 	APPEND root=/dev/ram0 ramdisk_size=1500000 ip=dhcp boot=casper url=http://192.168.1.1/ubuntu-22.04.5-live-server-amd64.iso autoinstall ds="nocloud-net;s=http://192.168.1.1/ubuntu/autoinstall/server/" debug ---
 ```
-
 - 指定 `kernel` 和 `initrd`
 - 指定最终安装程序：`ubuntu-22.04.5-live-server-amd64.iso` 置于 `/var/www/html` 目录
 - 内核先在内存（RAM）中创建一块固定大小的“虚拟硬盘”，并给它分配一个设备名，如 `/dev/ram0`。(`ramdisk_size` 参数就是用来指定这块硬盘大小的)。然后，内核需要一个“文件系统驱动程序”（比如 `ext2` 驱动）来格式化并挂载这个虚拟硬盘。最后，将 `initrd` 文件（它本身就是一个小型的 `ext2` 文件系统镜像）的内容“倾倒”到这个虚拟硬盘上。
@@ -463,7 +453,6 @@ LABEL Ubuntu Desktop 22.04
 
 > [!tip]+ 注意
 > `pxelinux.0` 是从 `/srv/tftp/bios/` 目录下载的，所以 pxelinux.0 认为这是它的工作目录，因此 `kernel` 和 `initrd` 是相对于这个目录来查找的，所以这里使用 `/srv/tftp/bios/../boot` 指定tftp根目录下的boot目录：
->
 > ```shell
 > root@jkl:/home/jkl# tree /srv/tftp
 > /srv/tftp
@@ -505,12 +494,10 @@ cp /usr/lib/shim/shimx64.efi.signed /srv/tftp/grub/bootx64.efi
 cp /usr/lib/shim/mmx64.efi /srv/tftp/grub/mmx64.efi
 cp /usr/lib/grub/x86_64-efi-signed/grubnetx64.efi.signed /srv/tftp/grub/grubx64.efi
 ```
-
 - Linux发行版需要一个解决方案来满足UEFI安全引导的要求，同时又要避免与微软就其所有引导加载程序和内核二进制文件进行持续的签名流程。由于微软通常拒绝为像GRUB这样采用通用公共许可证（GPL）的引导加载程序进行签名，因此需要一个中间层 。`shim`正是为解决这一问题而设计的。它是一个小巧、经过严格审计的第一阶段引导加载程序，其本身由微软的密钥签名，从而被所有启用安全引导的UEFI固件所信任。`shim`的主要功能是链式加载另一个应用程序，通常是GRUB引导加载程序，而这个第二阶段的引导加载程序则由`shim`内置的或它所信任的密钥来签名。`shim`的这种设计，为Linux发行版提供了一种无需微软直接签名所有组件，即可参与安全引导生态系统的有效途径。
 - `grubx64.efi`是第二阶段的主要引导加载程序，其主要职责包括显示引导菜单、解析引导配置（通常是`/boot/grub/grub.cfg`）并加载操作系统内核（`vmlinuz`）和初始RAM磁盘（`initramfs`）到内存中。
 
-_（下面这种也行）_
-
+*（下面这种也行）*
 ```shell
 apt-get download shim.signed
 dpkg -x shim-signed_1.37~18.04.13+15.7-0ubuntu1_amd64.deb shim
@@ -583,9 +570,8 @@ menuentry "Ubuntu Server 25.04 Auto" {
         initrd boot/casper/ubuntu/2504/server/initrd
 }
 ```
-
-- `url` 参数指定使用 _`http协议`_ 从 `http server` 获取安装程序
-  - 也可以使用 _`nfsroot`_ 和 _`netboot=nfs`_ 参数，指定使用 `nfs协议` 从 `nfs server` 获取安装程序
+- `url` 参数指定使用 *`http协议`* 从 `http server` 获取安装程序
+	- 也可以使用 *`nfsroot`* 和 *`netboot=nfs`* 参数，指定使用 `nfs协议` 从 `nfs server` 获取安装程序
 - `ubuntu-22.04.5-live-server-amd64.iso` 置于 `/var/www/html` 目录
 - `initramfs` 环境中一个名为 `casper` 的Live启动脚从 `url` 参数指定的地址下载 `iso` 来进行完整的系统安装
 - Live环境成功启动之后，Ubuntu Server 安装程序本身（`subiquity`）根据 `autoinstall` 参数获取 `user-data` 和 `meta-data` 配置文件，并严格按照里面的“剧本”来执行安装。
@@ -627,8 +613,7 @@ sudo losetup -d ${loopdev}
 
 ###### memtest bootloader configuration file
 
-_UEFI_
-
+*UEFI*
 ```shell
 nano /srv/tftp/grub/grub.cfg
 ```
@@ -639,8 +624,7 @@ menuentry "Memtest86+ UEFI" {
 }
 ```
 
-_Legacy BIOS_
-
+*Legacy BIOS*
 ```shell
 nano /srv/tftp/bios/pxelinux.cfg/default
 ```
@@ -684,7 +668,6 @@ sudo apt-get install cloud-init
 ```shell
 mkdir -p /var/www/html/ubuntu/autoinstall/{server,desktop}
 ```
-
 #### meta-data
 
 ```shell
@@ -709,8 +692,7 @@ cloud-init devel schema --config-file user-data
 ```
 
 > [!example]+ common server user-data
-> `/var/www/html/user-data`，适用于 _ubuntu server 20.04 22.04 24.04 25.04_
->
+> `/var/www/html/user-data`，适用于 *ubuntu server 20.04 22.04 24.04 25.04*
 > ```yaml
 > #cloud-config
 > autoinstall:
@@ -773,7 +755,7 @@ cloud-init devel schema --config-file user-data
 >   package_upgrade: false
 >   # updates: security
 >   shutdown: reboot
->
+> 
 >   storage:
 >     config:
 >       # === 磁盘（GPT）/ BIOS 引导目标（放在磁盘上）===
@@ -786,7 +768,7 @@ cloud-init devel schema --config-file user-data
 >           wipe: superblock-recursive,
 >           grub_device: true,
 >         }
->
+> 
 >       # === ESP 分区 512M，存放 UEFI bootloader（grubx64.efi）===
 >       - {
 >           id: part-esp,
@@ -800,7 +782,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-esp, type: format, fstype: fat32, volume: part-esp }
 >       - { id: mnt-esp, type: mount, device: fmt-esp, path: /boot/efi }
->
+> 
 >       # === Boot 分区 512M，存放内核和初始临时文件系统 ===
 >       - {
 >           id: part-boot,
@@ -812,11 +794,11 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-boot, type: format, fstype: ext4, volume: part-boot }
 >       - { id: mnt-boot, type: mount, device: fmt-boot, path: /boot }
->
+> 
 >       # 4. LVM 物理容器 (占用剩余全部空间)
 >       - { id: part-lvm, type: partition, device: disk-os, size: -1 }
 >       - { id: vg01_int, type: lvm_volgroup, devices: [part-lvm], name: vg01 }
->
+> 
 >       # 5. LVM 逻辑卷: Swap (8G)
 >       - {
 >           id: lv-swap,
@@ -826,7 +808,7 @@ cloud-init devel schema --config-file user-data
 >           size: 8G,
 >         }
 >       - { id: fmt-swap, type: format, fstype: swap, volume: lv-swap }
->
+> 
 >       # 6. LVM 逻辑卷: Var (10G)
 >       - {
 >           id: lv-var,
@@ -837,7 +819,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-var, type: format, fstype: ext4, volume: lv-var }
 >       - { id: mnt-var, type: mount, device: fmt-var, path: /var }
->
+> 
 >       # 7. LVM 逻辑卷: Root (剩余全部)
 >       - {
 >           id: lv-root,
@@ -848,7 +830,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-root, type: format, fstype: ext4, volume: lv-root }
 >       - { id: mnt-root, type: mount, device: fmt-root, path: / }
->
+> 
 >   user-data:
 >     users:
 >       - name: ansible
@@ -863,35 +845,30 @@ cloud-init devel schema --config-file user-data
 >     runcmd:
 >       - [ln, -sf, /usr/bin/batcat, /usr/local/bin/bat]
 > ```
->
 > - `user-data` 作为系统“第一次启动”过程的一部分，对这个全新的、空白的系统进行自动化初始配置，将它从一个通用模板变成一个符合您特定需求的、立即可用的服务器。
 > - `layout`: 用于**自动**分区，省事但缺乏灵活性；`config`: 用于**手动**分区，灵活且功能强大。
 > - 缩进不能用制表符，只能用空格
+
 
 > [!question]+ run_unattended_upgrades
 > https://askubuntu.com/questions/1410553/how-to-disable-unattended-upgrades-during-autoinstall-user-data-cloud-config
 
 > [!question]+ swap分区
 > https://askubuntu.com/questions/1545592/autoinstall-failing-at-storage-configuration-on-ubuntu-server-22-04-lts#:~:text=For%20the%20swap%20partition%2C%20you,flag%3A%20swap
->
+> 
 > 使用 `free -h` 和 `swapon --show` 命令查看
 
 > [!note]+ 生成 ssh 密钥对
 > 在管理主机上生成 ssh密钥对，公钥通过 autoinstall 分发
->
 > ```shell
 > ssh-keygen -t ed25519 -C "ssh-key" -f ~/.ssh/id_ed25519_ssh
 > cat ~/.ssh/id_ed25519_ssh.pub
 > ```
->
 > 分发到 pxe client 后，查看 ansible ssh 公钥：
->
 > ```shell
 > cat /home/ansible/.ssh/authorized_keys
 > ```
->
 > 在管理主机上使用私钥登录测试：
->
 > ```shell
 > ssh -i ~/.ssh/id_ed25519_ssh ansible@<target-ip>
 > ```
@@ -903,27 +880,25 @@ cloud-init devel schema --config-file user-data
 
 > [!tip]+ autoinstall 支持情况
 > [Introduction to autoinstall - Ubuntu installation documentation](https://canonical-subiquity.readthedocs-hosted.com/en/latest/intro-to-autoinstall.html)
->
+> 
 > This format is supported in the following installers:
->
 > - Ubuntu Server, version 20.04 and later
 > - Ubuntu Desktop, version 23.04 and later
 
-|       | server iso +<br>server user-data | desktop iso +<br>desktop user-data | server iso +<br>desktop user-data                                                                   |
-| ----- | -------------------------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
-| 备注  |                                  |                                    | server user-data 基础上安装 ubuntu-desktop-minimal，配置 NetworkManager<br>很吃网络环境，很容易挂掉 |
-| 20.04 | ✅                               |                                    | ✅                                                                                                  |
-| 22.04 | ✅                               |                                    | ✅                                                                                                  |
-| 24.04 | ✅                               | ✅                                 | ✅                                                                                                  |
-| 25.04 | ✅                               |                                    | ❌                                                                                                  |
+|       | server iso +<br>server user-data | desktop iso +<br>desktop user-data | server iso +<br>desktop user-data                                               |
+| ----- | -------------------------------- | ---------------------------------- | ------------------------------------------------------------------------------- |
+| 备注    |                                  |                                    | server user-data 基础上安装 ubuntu-desktop-minimal，配置 NetworkManager<br>很吃网络环境，很容易挂掉 |
+| 20.04 | ✅                                |                                    | ✅                                                                               |
+| 22.04 | ✅                                |                                    | ✅                                                                               |
+| 24.04 | ✅                                | ✅                                  | ✅                                                                               |
+| 25.04 | ✅                                |                                    | ❌                                                                               |
 
-###### 24.04 desktop iso + desktop user-data
+###### 24.04 desktop iso + desktop user-data 
 
 > [!example]+ ubuntu 24.04 desktop user-data
 > 如上，ubuntu desktop 版本只在 23.04 及之后才支持 autoinstall。
 > 在 vm 上测试 ubuntu desktop 24.04 时，desktop 24.04 的 boot image，安装 install image 时，如果使用 server 24.04 的 user-data，会在安装 ssh server 时报错，
-> 给 desktop 24.04 单独准备一个 user-data，ssh server 改到 autoinstall.user-data.packages 下安装，allow-pw、ssh密钥等仍然使用 autoinstall.ssh 进行配置，
->
+  给 desktop 24.04 单独准备一个 user-data，ssh server 改到 autoinstall.user-data.packages 下安装，allow-pw、ssh密钥等仍然使用 autoinstall.ssh 进行配置，
 > ```yaml
 > #cloud-config
 > autoinstall:
@@ -985,7 +960,7 @@ cloud-init devel schema --config-file user-data
 >   package_upgrade: false
 >   # updates: security
 >   shutdown: reboot
->
+> 
 >   storage:
 >     config:
 >       # === 磁盘（GPT）/ BIOS 引导目标（放在磁盘上）===
@@ -998,7 +973,7 @@ cloud-init devel schema --config-file user-data
 >           wipe: superblock-recursive,
 >           grub_device: true,
 >         }
->
+> 
 >       # === ESP 分区 512M，存放 UEFI bootloader（grubx64.efi）===
 >       - {
 >           id: part-esp,
@@ -1012,7 +987,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-esp, type: format, fstype: fat32, volume: part-esp }
 >       - { id: mnt-esp, type: mount, device: fmt-esp, path: /boot/efi }
->
+> 
 >       # === Boot 分区 512M，存放内核和初始临时文件系统 ===
 >       - {
 >           id: part-boot,
@@ -1024,11 +999,11 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-boot, type: format, fstype: ext4, volume: part-boot }
 >       - { id: mnt-boot, type: mount, device: fmt-boot, path: /boot }
->
+> 
 >       # 4. LVM 物理容器 (占用剩余全部空间)
 >       - { id: part-lvm, type: partition, device: disk-os, size: -1 }
 >       - { id: vg01_int, type: lvm_volgroup, devices: [part-lvm], name: vg01 }
->
+> 
 >       # 5. LVM 逻辑卷: Swap (8G)
 >       - {
 >           id: lv-swap,
@@ -1038,7 +1013,7 @@ cloud-init devel schema --config-file user-data
 >           size: 8G,
 >         }
 >       - { id: fmt-swap, type: format, fstype: swap, volume: lv-swap }
->
+> 
 >       # 6. LVM 逻辑卷: Var (10G)
 >       - {
 >           id: lv-var,
@@ -1049,7 +1024,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-var, type: format, fstype: ext4, volume: lv-var }
 >       - { id: mnt-var, type: mount, device: fmt-var, path: /var }
->
+> 
 >       # 7. LVM 逻辑卷: Root (剩余全部)
 >       - {
 >           id: lv-root,
@@ -1060,7 +1035,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-root, type: format, fstype: ext4, volume: lv-root }
 >       - { id: mnt-root, type: mount, device: fmt-root, path: / }
->
+> 
 >   user-data:
 >     users:
 >       - name: ansible
@@ -1076,18 +1051,16 @@ cloud-init devel schema --config-file user-data
 >       - [ln, -sf, /usr/bin/batcat, /usr/local/bin/bat]
 > ```
 
-###### 22.04 server iso + desktop user-data
+###### 22.04 server iso + desktop user-data 
 
 > [!example]+ ubuntu 22.04 desktop user-data
 > [autoinstall-desktop](https://github.com/canonical/autoinstall-desktop/blob/main/README.md)
->
+> 
 > 如上，ubuntu desktop 22.04 不支持 autoinstall，
->
 > 1. 参考链接示例，使用 server 版本 user-data，先安装 ubuntu server 22.04，再安装 ubuntu-desktop GUI
-> 2. 另外 cloud-init 会在启动时写入 `50-cloud-init.yaml` 的 netplan 配置文件，所以写入一个 99-\*.yaml 的 netplan 配置文件，将 netplan renderer 修改为 NetworkManager
->
+> 2. 另外 cloud-init 会在启动时写入 `50-cloud-init.yaml` 的 netplan 配置文件，所以写入一个 99-*.yaml 的 netplan 配置文件，将 netplan renderer 修改为 NetworkManager
+> 
 > 注意：测试的时候有遇到同样的配置有时能成功安装 ubuntu-desktop，有时不能安装，感觉和网络也有一定关系，比如开着代理连接阿里云apt源，可能触发 subiquity 的某种超时机制之类的
->
 > ```yaml
 > #cloud-config
 > autoinstall:
@@ -1175,7 +1148,7 @@ cloud-init devel schema --config-file user-data
 >     - curtin in-target -- systemctl disable systemd-networkd.service
 >     - curtin in-target -- systemctl disable systemd-networkd-wait-online.service
 >   shutdown: reboot
->
+> 
 >   storage:
 >     config:
 >       # === 磁盘（GPT）/ BIOS 引导目标（放在磁盘上）===
@@ -1188,7 +1161,7 @@ cloud-init devel schema --config-file user-data
 >           wipe: superblock-recursive,
 >           grub_device: true,
 >         }
->
+> 
 >       # === ESP 分区 512M，存放 UEFI bootloader（grubx64.efi）===
 >       - {
 >           id: part-esp,
@@ -1202,7 +1175,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-esp, type: format, fstype: fat32, volume: part-esp }
 >       - { id: mnt-esp, type: mount, device: fmt-esp, path: /boot/efi }
->
+> 
 >       # === Boot 分区 512M，存放内核和初始临时文件系统 ===
 >       - {
 >           id: part-boot,
@@ -1214,11 +1187,11 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-boot, type: format, fstype: ext4, volume: part-boot }
 >       - { id: mnt-boot, type: mount, device: fmt-boot, path: /boot }
->
+> 
 >       # 4. LVM 物理容器 (占用剩余全部空间)
 >       - { id: part-lvm, type: partition, device: disk-os, size: -1 }
 >       - { id: vg01_int, type: lvm_volgroup, devices: [part-lvm], name: vg01 }
->
+> 
 >       # 5. LVM 逻辑卷: Swap (8G)
 >       - {
 >           id: lv-swap,
@@ -1228,7 +1201,7 @@ cloud-init devel schema --config-file user-data
 >           size: 8G,
 >         }
 >       - { id: fmt-swap, type: format, fstype: swap, volume: lv-swap }
->
+> 
 >       # 6. LVM 逻辑卷: Var (10G)
 >       - {
 >           id: lv-var,
@@ -1239,7 +1212,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-var, type: format, fstype: ext4, volume: lv-var }
 >       - { id: mnt-var, type: mount, device: fmt-var, path: /var }
->
+> 
 >       # 7. LVM 逻辑卷: Root (剩余全部)
 >       - {
 >           id: lv-root,
@@ -1250,7 +1223,7 @@ cloud-init devel schema --config-file user-data
 >         }
 >       - { id: fmt-root, type: format, fstype: ext4, volume: lv-root }
 >       - { id: mnt-root, type: mount, device: fmt-root, path: / }
->
+> 
 >   user-data:
 >     users:
 >       - name: ansible
@@ -1266,30 +1239,27 @@ cloud-init devel schema --config-file user-data
 >       - [ln, -sf, /usr/bin/batcat, /usr/local/bin/bat]
 > ```
 
+
 #### cloud-init troubleshooting
 
 [Chapter 4. Configuring cloud-init | Configuring and managing cloud-init for RHEL 8 | Red Hat Enterprise Linux | 8 | Red Hat Documentation](https://docs.redhat.com/en/documentation/red_hat_enterprise_linux/8/html/configuring_and_managing_cloud-init_for_rhel_8/configuring-cloud-init_cloud-content#troubleshooting-cloud-init_configuring-cloud-init)
 
-_实际执行的 `user-data` 配置_
-
+*实际执行的 `user-data` 配置*
 ```shell
 less /var/log/installer/autoinstall-user-data
 ```
 
-_`curtin` 日志_
-
+*`curtin` 日志*
 ```shell
 less /var/log/installer/curtin-install.log
 ```
 
-_`subiquity` 安装器后台服务日志_
-
+*`subiquity` 安装器后台服务日志*
 ```shell
 less /var/log/installer/subiquity-server-debug.log
 ```
 
-_`cloud-init` 服务日志_
-
+*`cloud-init` 服务日志*
 ```shell
 less /var/log/cloud-init.log
 less /var/log/cloud-init-output.log
@@ -1300,7 +1270,7 @@ cloud-init status
 
 ###### boot image
 
-搜索 18.04 netboot 镜像获取下载链接
+ 搜索 18.04 netboot 镜像获取下载链接
 
 ```shell
 cd /srv/tftp/boot/casper/ubuntu/1804/server
@@ -1394,6 +1364,7 @@ tar -xzf netboot.tar.gz -C /srv/tftp/boot/casper/ubuntu/1604/server
 
 ###### preseed
 
+
 ```shell
 mkdir -p /var/www/html/ubuntu/preseed/server
 nano /var/www/html/ubuntu/preseed/server/ubuntu-1604.cfg
@@ -1466,6 +1437,8 @@ d-i preseed/late_command string \
   in-target ln -sf /usr/bin/batcat /usr/local/bin/bat || true
 ```
 
+
+
 ## 2. ipxe bootloader
 
 使用 `pxe` 拉去 `ipxe bootloader`，或者将 `ipxe` 烧录进网卡 `ROM`，
@@ -1536,30 +1509,26 @@ wget https://boot.ipxe.org/undionly.kpxe -P /srv/tftp/bios
 
 > [!failure]+ Asus B365M-K 启动后在 ipxe 启动菜单，键盘无响应
 > 使用 snponly.efi 替换 ipxe.efi 后解决，即 dhcp 下发 snponly.efi
->
 > ```shell
 > wget https://boot.ipxe.org/x86_64-efi/snponly.efi -O /srv/tftp/grub/snponly.efi
 > ```
 
+
 > [!note]+ 自己编译 ipxe bootloader
 > **AI回答，待测试**
->
 > 1. 安装必要的开发工具
->
 > ```shell
 > sudo apt update
 > sudo apt install -y build-essential liblzma-dev git libiberty-dev
 > ```
->
+> 
 > 2. 下载源码并修改配置
->
 > ```shell
 > git clone https://github.com/ipxe/ipxe.git
 > cd ipxe/src
 > ```
->
+> 
 > 3. 修改产品名称 (实现你的 branding.h/PRODUCT_NAME = iPXE-JKL)
->
 > ```shell
 > sed -i 's/"iPXE"/"iPXE-JKL"/g' config/defaults.h
 > # 启用图形控制台和图像支持
@@ -1571,18 +1540,16 @@ wget https://boot.ipxe.org/undionly.kpxe -P /srv/tftp/bios
 > # 开启 Framebuffer 驱动 (EFI 必需)
 > sed -i 's/\/\/#define CONSOLE_FRAMEBUFFER/#define CONSOLE_FRAMEBUFFER/' config/console.h
 > ```
->
+> 
 > 4. 编译你需要的两个版本
->
 > ```shell
 > # 编译 UEFI 版 (生成 ipxe.efi)
 > make bin-x86_64-efi/ipxe.efi
 > # 编译 BIOS 版 (生成 undionly.kpxe)
 > make bin/undionly.kpxe
 > ```
->
+> 
 > 5. 替换 TFTP 目录下的文件
->
 > ```shell
 > # 请根据你的实际路径替换
 > cp bin-x86_64-efi/ipxe.efi /srv/tftp/grub/ipxe.efi
@@ -1730,7 +1697,6 @@ sleep 3
 reboot
 
 ```
-
 - `ds` 参数最后以 `/` 结尾
 - 测试 ubuntu2004 安装失败，给内核参数（kernel行）添加 `initrd=initrd`
 
@@ -1822,14 +1788,13 @@ cp /var/www/html/ubuntu/autoinstall/server/{user-data,meta-data} /var/www/html/u
 
 > [!quote]+ ipxe 引导 mdt boot image
 > Ref：https://www.dell.com/support/kbdoc/en-us/000148982/using-tiny-pxe-and-ipxe-to-allow-uefi-pxe-booting-on-non-server-os-or-server-2008
->
+> 
 > 根据这个帖子，需要获取 mdt 上的 3 个文件，分别从以下目录获取：
->
-> ```shell
->  C:\DeploymentShare\Boot\LiteTouchPE_x64.wim
->  C:\DeploymentShare\Boot\x64\Boot\boot.sdi
->  C:\DeploymentShare\Boot\x64\Boot\BCD
-> ```
+>```shell
+ C:\DeploymentShare\Boot\LiteTouchPE_x64.wim
+ C:\DeploymentShare\Boot\x64\Boot\boot.sdi
+ C:\DeploymentShare\Boot\x64\Boot\BCD
+>```
 >
 > 另外需要从 ipxe 官网下载 `wimboot bootloader` 用来引导 wim 格式的 `boot image`：https://github.com/ipxe/wimboot/releases/latest/download/wimboot
 
@@ -1837,17 +1802,17 @@ cp /var/www/html/ubuntu/autoinstall/server/{user-data,meta-data} /var/www/html/u
 
 - 适配了 `windows mdt` 的 `http` 目录结构见 [[#ipxe 多版本目录结构设计]]
 - 适配了 `windows mdt` 的 `ipxe` 配置文件见 [[#ipxe bootloader configuration file]]
-  - [800x600 PNG 背景图片](http://boot.ipxe.org/ipxe.png)
+	- [800x600 PNG 背景图片](http://boot.ipxe.org/ipxe.png)
 
 #### 域名问题
 
 > [!question]+ MDTServer 域名解析问题
 > 如 [[02 MDT部署流程#深入解析 MDT 流程]] 中所述，`bootstrap.ini` 在 mdt 生成 `boot image` 后，会写入到 `boot image` 的 `\Deploy\Scripts\Bootstrap.ini`，
 > 如果 `bootstrap.ini` 中指定的是 `mdt server` 的机器名 `MDTSERVER`，目标机器无法解析这个机器名，会导致安装过程报错。
->
-> 实际测试过程中，同时修改了 `Deployment Share` 属性中 `General tab` 下 `Network (UNC) path` 中的域名和 `Rules tab` 下 `Edit Bootstrap.ini` 中的域名，修改后重新生成 `boot image`，最终 ipxe 下发的是这个 _ip 版本的 boot image_，安装过程能成功。
+> 
+> 实际测试过程中，同时修改了 `Deployment Share` 属性中 `General tab` 下 `Network (UNC) path` 中的域名和 `Rules tab` 下 `Edit Bootstrap.ini` 中的域名，修改后重新生成 `boot image`，最终 ipxe 下发的是这个 *ip 版本的 boot image*，安装过程能成功。
 > 之后即使 `mdt server` 上修改的2处域名改回去也不影响，可见实际影响的只有 `boot image` 中的域名，安装环境后续不会读取 `mdt server` 上那2处域名设置，另外猜测实际应该只需要修改 `bootstrap.ini` 中的域名，`Network (UNC) path` 中的域名应该不影响
->
+> 
 > ![[Pasted image 20260311102644.png]]
 > ![[Pasted image 20260311102802.png]]
 
@@ -1912,13 +1877,11 @@ nano /var/www/html/ipxe_boot_script.php
 set rep http://192.168.1.1/report
 imgfetch ${rep}?ip=${net0/ip}\&mac=${net0/mac:hexhyp}\&uuid=${uuid}\&board_serial=${board-serial}\&serial=${serial}\&asset=${asset}
 ```
-
-- 在 iPXE 里 `imgfetch` 的作用是从指定 URI 下载一个文件或资源。但这里下载的 URL 很可能是一个 _接口API_，并不是下载文件。所以实际效果就是*访问这个 URL，把参数传给服务器。*
+- 在 iPXE 里 `imgfetch` 的作用是从指定 URI 下载一个文件或资源。但这里下载的 URL 很可能是一个 *接口API*，并不是下载文件。所以实际效果就是*访问这个 URL，把参数传给服务器。*
 
 #### 查看上报信息
 
-_vm2执行pxe启动_
-
+*vm2执行pxe启动*
 ```shell
 apt install jq -y
 cat /var/log/nginx/ipxe-report.log | jq .
@@ -1939,6 +1902,7 @@ cat /var/log/nginx/ipxe-report.log | jq .
   "ua": "iPXE/1.21.1+ (g5c49e)"
 }
 ```
+
 
 ## 排查日志
 
@@ -1965,7 +1929,6 @@ less /var/log/curtin/install.log
 ```shell
 cat /var/log/installer/curtin-install/subiquity-curtin-apt.conf
 ```
-
 - 查看 subiquity 最终传给 curtin 的 apt 配置长什么样
 
 ### cloud-init
@@ -1981,6 +1944,9 @@ less /var/log/cloud-init-output.log
 ```shell
 cloud-init status --long
 ```
+
+
+
 
 [^1]: [[启动文件对比汇总#boot image, install image]]
 

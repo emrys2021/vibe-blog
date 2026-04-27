@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
 import { getCategoryHref } from '@/lib/categories';
 import { getAdjacentPosts, getAllSlugs, getPost, getPostMeta } from '@/lib/posts';
+import { decodeSlugParam, getPostHref } from '@/lib/post-urls';
 import { formatDate } from '@/lib/format';
 import { Prompt } from '@/components/Prompt';
 import { Toc } from '@/components/Toc';
@@ -11,15 +12,16 @@ import { PostEnhancements } from '@/components/PostEnhancements';
 import { siteConfig } from '../../../../blog.config';
 
 interface Props {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ slug: string[] }>;
 }
 
 export async function generateStaticParams() {
-  return getAllSlugs().map((slug) => ({ slug }));
+  return getAllSlugs().map((slug) => ({ slug: slug.split('/') }));
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: slugParam } = await params;
+  const slug = decodeSlugParam(slugParam);
   const post = getPostMeta(slug);
   if (!post) return {};
   return {
@@ -36,7 +38,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 }
 
 export default async function PostPage({ params }: Props) {
-  const { slug } = await params;
+  const { slug: slugParam } = await params;
+  const slug = decodeSlugParam(slugParam);
   const post = await getPost(slug);
   if (!post) notFound();
 
@@ -126,7 +129,7 @@ export default async function PostPage({ params }: Props) {
           <nav className="mt-12 pt-6 border-t border-rule grid sm:grid-cols-2 gap-4 text-sm">
             {prev ? (
               <Link
-                href={`/posts/${prev.slug}`}
+                href={getPostHref(prev.slug)}
                 className="group block border border-rule rounded p-3 hover:border-accent transition-colors"
               >
                 <div className="text-xs text-fg-dim">← prev</div>
@@ -139,7 +142,7 @@ export default async function PostPage({ params }: Props) {
             )}
             {next ? (
               <Link
-                href={`/posts/${next.slug}`}
+                href={getPostHref(next.slug)}
                 className="group block border border-rule rounded p-3 text-right hover:border-accent transition-colors"
               >
                 <div className="text-xs text-fg-dim">next →</div>
@@ -156,3 +159,4 @@ export default async function PostPage({ params }: Props) {
     </Container>
   );
 }
+

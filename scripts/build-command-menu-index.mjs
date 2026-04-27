@@ -4,7 +4,9 @@ import path from 'node:path';
 import matter from 'gray-matter';
 
 const ROOT = process.cwd();
-const CONTENT_ROOT = path.join(ROOT, 'content', 'posts');
+const CONTENT_ROOT = path.resolve(
+  process.env.BLOG_CONTENT_ROOT ?? path.join(ROOT, 'content', 'posts'),
+);
 const OUTPUT_PATH = path.join(ROOT, 'public', 'command-menu-index.json');
 const FULLTEXT_OUTPUT_PATH = path.join(
   ROOT,
@@ -12,6 +14,15 @@ const FULLTEXT_OUTPUT_PATH = path.join(
   'command-menu-fulltext-index.json',
 );
 const INCLUDE_DRAFTS = process.argv.includes('--include-drafts');
+const MARKDOWN_SOURCE_RE = /\\.(md|mdx|markdown)$/i;
+const INDEX_SOURCE_RE = /^index\\.(md|mdx|markdown)$/i;
+const IGNORED_CONTENT_DIRS = new Set([
+  '.git',
+  '.obsidian',
+  '.trash',
+  'node_modules',
+  'attachments',
+]);
 
 function collectMarkdownFiles() {
   if (!fs.existsSync(CONTENT_ROOT)) return [];
@@ -73,9 +84,9 @@ function getDisplayCategoryPrefixes(value) {
   return segments.map((_, index) => segments.slice(0, index + 1).join('/'));
 }
 
-function parseFrontmatter(raw, fallbackTitle) {
-  const parsed = matter(raw);
-  const fm = parsed.data ?? {};
+function parseFrontmatter(raw, fallbackTitle, fallbackCategory) {
+  const parsed = parseMatterSafely(raw);
+  const fm = isRecord(parsed.data) ? parsed.data : {};
 
   return {
     data: {
@@ -84,7 +95,7 @@ function parseFrontmatter(raw, fallbackTitle) {
       category:
         typeof fm.category === 'string'
           ? normalizeCategoryPath(fm.category)
-          : undefined,
+          : fallbackCategory,
       tags: Array.isArray(fm.tags) ? fm.tags.map(String) : [],
       draft: Boolean(fm.draft),
     },
@@ -92,6 +103,25 @@ function parseFrontmatter(raw, fallbackTitle) {
   };
 }
 
+
+function parseMatterSafely(raw) {
+  try {
+    return matter(raw);
+  } catch {
+    return { data: {}, content: stripLeadingFrontmatter(raw) };
+  }
+}
+
+function stripLeadingFrontmatter(raw) {
+  if (!raw.startsWith('---')) return raw;
+
+  const match = /^---\r?\n[\s\S]*?\r?\n---\r?\n?/.exec(raw);
+  return match ? raw.slice(match[0].length) : raw;
+}
+
+function isRecord(value) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
+}
 function normalizeSearchText(raw) {
   return raw
     .replace(/```[\s\S]*?```/g, ' ')
@@ -107,9 +137,10 @@ function normalizeSearchText(raw) {
 
 function buildCommandMenuData() {
   const postEntries = collectMarkdownFiles()
-    .map(({ slug, absPath }) => {
-      const raw = fs.readFileSync(absPath, 'utf8');
-      const { data, content } = parseFrontmatter(raw, slug);
+    .map((source) => {
+      const raw = fs.readFileSync(source.absPath, 'utf8');
+      const { data, content } = parseFrontmatter(raw, source.title, source.category);
+      const { slug } = source;
 
       return {
         draft: data.draft,
@@ -180,6 +211,10 @@ function buildCommandMenuData() {
   };
 }
 
+function toPosixPath(value) {
+  return value.split(path.sep).join('/');
+}
+
 function main() {
   fs.mkdirSync(path.dirname(OUTPUT_PATH), { recursive: true });
 
@@ -200,3 +235,6 @@ function main() {
 }
 
 main();
+
+
+

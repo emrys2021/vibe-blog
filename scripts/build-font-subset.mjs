@@ -7,7 +7,7 @@ import { spawnSync } from 'node:child_process';
 const ROOT = process.cwd();
 const CACHE_DIR = path.join(ROOT, '.cache', 'fonts');
 const SUBSET_OPTIONS = [
-  '--flavor=woff2',
+  '--flavor=woff',
   '--layout-features=*',
   '--glyph-names',
   '--symbol-cmap',
@@ -16,11 +16,22 @@ const SUBSET_OPTIONS = [
   '--notdef-outline',
   '--recommended-glyphs',
 ];
+const CONTENT_ROOT = path.resolve(
+  process.env.BLOG_CONTENT_ROOT ?? path.join(ROOT, 'content', 'posts'),
+);
 const TEXT_SOURCES = [
-  path.join(ROOT, 'content', 'posts'),
+  CONTENT_ROOT,
   path.join(ROOT, 'src'),
   path.join(ROOT, 'blog.config.ts'),
 ];
+const IGNORED_DIRS = new Set([
+  '.git',
+  '.next',
+  '.obsidian',
+  '.trash',
+  'node_modules',
+  'attachments',
+]);
 const TEXT_EXTENSIONS = new Set([
   '.css',
   '.js',
@@ -57,7 +68,7 @@ const FONT_BUILDS = [
       'src',
       'app',
       'fonts',
-      'lxgw-wenkai-subset.woff2',
+      'lxgw-wenkai-subset.woff',
     ),
     outputMetaPath: path.join(
       ROOT,
@@ -96,6 +107,11 @@ const FONT_BUILDS = [
 ];
 
 async function main() {
+  if (process.env.VERCEL === '1' && hasAllOutputFonts()) {
+    console.log('font:subset skipped on Vercel; using committed font assets');
+    return;
+  }
+
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   const pyftsubset = resolvePyftsubsetBinary();
 
@@ -117,11 +133,19 @@ async function main() {
 
     const sourceFontPath = process.env[font.sourceEnv] || font.sourcePath;
     if (!fs.existsSync(sourceFontPath)) {
-      await downloadSourceFont(
-        sourceFontPath,
-        process.env[font.sourceUrlEnv] || font.defaultSourceUrl,
-        font.label,
-      );
+      try {
+        await downloadSourceFont(
+          sourceFontPath,
+          process.env[font.sourceUrlEnv] || font.defaultSourceUrl,
+          font.label,
+        );
+      } catch (error) {
+        if (fs.existsSync(font.outputFontPath)) {
+          console.warn('font:subset kept existing ' + path.relative(ROOT, font.outputFontPath) + ' because ' + font.label + ' source font is unavailable');
+          continue;
+        }
+        throw error;
+      }
     }
 
     const result = spawnSync(
@@ -164,6 +188,10 @@ async function main() {
   }
 }
 
+
+function hasAllOutputFonts() {
+  return FONT_BUILDS.every((font) => fs.existsSync(font.outputFontPath));
+}
 function collectSiteCharacters(alwaysInclude) {
   const chars = new Set(alwaysInclude.split(''));
 
@@ -185,6 +213,7 @@ function walkTextFiles(targetPath, onText) {
   const stats = fs.statSync(targetPath);
   if (stats.isDirectory()) {
     for (const entry of fs.readdirSync(targetPath, { withFileTypes: true })) {
+      if (entry.isDirectory() && IGNORED_DIRS.has(entry.name)) continue;
       walkTextFiles(path.join(targetPath, entry.name), onText);
     }
     return;
@@ -272,3 +301,8 @@ main().catch((error) => {
   console.error(error instanceof Error ? error.message : error);
   process.exit(1);
 });
+
+
+
+
+

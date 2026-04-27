@@ -14,8 +14,10 @@ export const jetbrainsMono = localFont({
 });
 
 export const wenkai = localFont({
-  src: './fonts/lxgw-wenkai-subset.woff2',
+  src: './fonts/lxgw-wenkai-subset.woff',
   variable: '--font-wenkai',
   display: 'swap',
   preload: true,
 });
+
+
