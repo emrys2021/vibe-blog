@@ -434,11 +434,12 @@ function CommandMenuPalette({
     <KBarPortal>
       <KBarPositioner className="fixed inset-0 z-[90] bg-black/55 px-4 backdrop-blur-sm">
         <div
+          className="mx-auto w-full max-w-[56rem]"
           role="dialog"
           aria-modal="true"
           aria-label="Command palette"
         >
-          <KBarAnimator className="w-full max-w-3xl overflow-hidden rounded-2xl border border-rule bg-bg-elev/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
+          <KBarAnimator className="w-full overflow-hidden rounded-2xl border border-rule bg-bg-elev/95 shadow-[0_24px_80px_rgba(0,0,0,0.45)]">
             <div className="border-b border-rule px-4 pb-3 pt-4">
               <div className="text-[10px] uppercase tracking-[0.28em] text-fg-dim">
                 command palette
